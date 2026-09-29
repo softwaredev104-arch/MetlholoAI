@@ -19,7 +19,7 @@ import { useTheme } from '@/design/themes';
 
 export default function FarmSetup() {
   const { colors }=useTheme();
-  const { firebaseUser, profile }=useAuth();
+  const { firebaseUser, profile, refreshProfile }=useAuth();
   const [step,setStep]=useState(2);
   const [farmName,setFarmName]=useState('');
   const [farmType,setFarmType]=useState('Mixed farming');
@@ -89,6 +89,7 @@ export default function FarmSetup() {
       // Refresh the in-memory auth/profile state before leaving onboarding.
       // Otherwise the root redirect can still see the pre-completion profile
       // and send the user straight back into onboarding.
+      await refreshProfile();
       router.replace('/');
 
     }catch(error){Alert.alert('Could not activate access',error instanceof Error?error.message:'Please try again.');}

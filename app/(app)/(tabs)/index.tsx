@@ -33,6 +33,8 @@ export default function Home() {
   const { profile } = useAuth();
   const { colors } = useTheme();
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState(false);
   const firstName = profile?.displayName?.split(' ')[0] ?? 'farmer';
 
   const latitude = profile?.location?.latitude;
@@ -41,10 +43,18 @@ export default function Home() {
 
   useEffect(() => {
     const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+    setWeatherLoading(true);
+    setWeatherError(false);
     getCurrentWeather(
       hasCoordinates ? latitude : undefined,
       hasCoordinates ? longitude : undefined,
-    ).then(setWeather).catch(() => setWeather(null));
+    )
+      .then(setWeather)
+      .catch(() => {
+        setWeather(null);
+        setWeatherError(true);
+      })
+      .finally(() => setWeatherLoading(false));
   }, [latitude, longitude]);
 
   return (
@@ -66,7 +76,9 @@ export default function Home() {
           </View>
           <View style={{ flex: 1 }}>
             <AppText variant="headline">Weather</AppText>
-            <AppText style={{ color: colors.textSecondary }}>{weather ? weatherLabel(weather.weatherCode) : 'Loading current conditions…'}</AppText>
+            <AppText style={{ color: colors.textSecondary }}>
+              {weather ? weatherLabel(weather.weatherCode) : weatherLoading ? 'Loading current conditions…' : weatherError ? 'Weather unavailable' : 'No weather data'}
+            </AppText>
           </View>
           {weather ? <AppText variant="largeTitle">{Math.round(weather.temperature)}°</AppText> : null}
         </View>

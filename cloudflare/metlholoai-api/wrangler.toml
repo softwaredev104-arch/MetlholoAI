@@ -14,7 +14,13 @@ class_name = "MetlholoAIModelRuntime"
 image = "../../Dockerfile"
 image_build_context = "../../"
 max_instances = 2
-instance_type = "basic"
+[containers.instance_type]
+vcpu = 1
+memory_mib = 2048
+disk_mb = 4000
+
+  [containers.constraints]
+  regions = ["AFR"]
 
 [[durable_objects.bindings]]
 name = "MODEL_RUNTIME"

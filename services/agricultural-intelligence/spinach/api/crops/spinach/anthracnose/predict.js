@@ -37,8 +37,8 @@ async function loadModel() {
     process.cwd(),
     "models",
     "crops",
-    "tomato",
-    "Anthracnose",
+    "spinach",
+    "anthracnose",
     "metadata.json"
   );
 

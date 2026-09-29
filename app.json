@@ -23,6 +23,12 @@
           "cameraPermission": "MetlholoAI uses your camera for agricultural diagnosis.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "alerts"
+        }
       ]
     ],
     "experiments": {

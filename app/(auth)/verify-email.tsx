@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
@@ -45,6 +46,7 @@ export default function VerifyEmail() {
     setLoading(true);
     try {
       await authService.logout();
+      router.replace('/(auth)/welcome');
     } catch (error) {
       setMessage(getFriendlyErrorMessage(error));
       setLoading(false);

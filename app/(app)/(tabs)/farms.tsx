@@ -59,6 +59,7 @@ export default function Farms() {
           <AppCard style={styles.farmHeader}>
             <AppText variant="headline">{farm.name}</AppText>
             <AppText style={styles.muted}>{farm.location ?? 'Location not set'}</AppText>
+            <AppButton title="Open farm details" variant="secondary" onPress={() => router.push({ pathname: '/farm/[farmId]', params: { farmId: farm.id } })} />
             {farm.latitude != null && farm.longitude != null ? (
               <AppText style={styles.muted}>GPS {farm.latitude.toFixed(4)}, {farm.longitude.toFixed(4)}</AppText>
             ) : null}

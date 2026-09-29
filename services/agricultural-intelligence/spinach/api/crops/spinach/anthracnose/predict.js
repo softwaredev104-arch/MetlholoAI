@@ -23,7 +23,7 @@ async function loadModel() {
     "models",
     "crops",
     "spinach",
-    "Anthracnose",
+    "anthracnose",
     "model.json"
   );
 

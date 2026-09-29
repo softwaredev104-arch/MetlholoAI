@@ -67,17 +67,22 @@ export async function deleteFarmRecord(farmId: string, type: FarmRecordType, id:
         getDocs(query(
           collection(db(), 'farms', farmId, collectionName),
           where('relatedRecordId', '==', id),
-          where('relatedRecordType', '==', type),
         )),
       ),
     );
     const diagnosisSnapshot = await getDocs(query(
       collection(db(), 'farms', farmId, 'diagnostics'),
       where('sourceRecordId', '==', id),
-      where('sourceRecordType', '==', type),
     ));
 
-    if (linked.some(snapshot => !snapshot.empty) || !diagnosisSnapshot.empty) {
+    const hasLinkedHistory = linked.some(snapshot =>
+      snapshot.docs.some(item => item.data().relatedRecordType === type),
+    );
+    const hasDiagnoses = diagnosisSnapshot.docs.some(item =>
+      item.data().sourceRecordType === type,
+    );
+
+    if (hasLinkedHistory || hasDiagnoses) {
       throw new Error('This asset has linked history. Remove or reassign its health, feeding, task, and diagnosis records before deleting it.');
     }
   }

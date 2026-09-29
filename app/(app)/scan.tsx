@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Image, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { requestCameraPermission, requestPhotoLibraryPermission } from '@/services/permissions/mobilePermissions';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
@@ -33,6 +34,20 @@ export default function Scan() {
   }, [modelId]);
 
   async function choose(source: 'camera' | 'library') {
+    const permission = source === 'camera'
+      ? await requestCameraPermission()
+      : await requestPhotoLibraryPermission();
+
+    if (permission !== 'granted' && permission !== 'limited') {
+      Alert.alert(
+        source === 'camera' ? 'Camera permission required' : 'Photo permission required',
+        source === 'camera'
+          ? 'Allow MetlholoAI to use your camera in Settings so you can capture a diagnosis image.'
+          : 'Allow MetlholoAI to access your photos in Settings so you can choose a diagnosis image.',
+      );
+      return;
+    }
+
     const result = source === 'camera'
       ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 })
       : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });

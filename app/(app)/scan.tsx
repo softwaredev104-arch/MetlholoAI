@@ -54,6 +54,7 @@ export default function Scan() {
   );
   const model = INTELLIGENCE_MODELS.find(item => item.id === modelId)
     ?? (subjectModels.length === 1 ? subjectModels[0] : null);
+  const modelComingSoon = model?.availability === 'coming_soon';
 
   useEffect(() => {
     async function loadAssets() {
@@ -113,7 +114,7 @@ export default function Scan() {
   }
 
   async function runPrediction() {
-    if (!uri || !model || !selectedAsset || !firebaseUser) return;
+    if (!uri || !model || !selectedAsset || !firebaseUser || modelComingSoon) return;
     setLoading(true);
     try {
       const result = await predict(model, uri);
@@ -247,7 +248,7 @@ export default function Scan() {
       {selectedAsset && subjectModels.length > 1 ? (
         <OptionPicker
           label="Select intelligence model"
-          options={subjectModels.map(item => ({ id: item.id, label: item.name, description: item.disease }))}
+          options={subjectModels.map(item => ({ id: item.id, label: item.name, description: item.availability === 'coming_soon' ? 'Coming soon' : item.disease }))}
           selected={modelId}
           onChange={value => { setModelId(String(value)); setPrediction(null); setReport(null); }}
         />
@@ -257,7 +258,12 @@ export default function Scan() {
         <AppCard>
           <AppText variant="headline">{model.subject} intelligence</AppText>
           <AppText>{assetLabel(selectedAsset)} · {model.name}</AppText>
-          {model.id === 'cattle-health-classifier' ? (
+          {modelComingSoon ? (
+            <>
+              <AppText variant="headline">Coming soon</AppText>
+              <AppText style={styles.muted}>This intelligence model is not currently available for live diagnosis. We are completing the production intelligence service before enabling interaction.</AppText>
+            </>
+          ) : model.id === 'cattle-health-classifier' ? (
             <AppText style={styles.muted}>This single cattle model distinguishes Foot and Mouth Disease, Healthy, and Lumpy Skin Disease. The report will name the detected outcome explicitly.</AppText>
           ) : (
             <AppText style={styles.muted}>The selected model will evaluate the image against its configured classes.</AppText>
@@ -265,7 +271,7 @@ export default function Scan() {
         </AppCard>
       ) : null}
 
-      {selectedAsset && model ? (
+      {selectedAsset && model && !modelComingSoon ? (
         <>
           <View style={styles.actions}>
             <AppButton title="Open camera" onPress={() => choose('camera')} />
@@ -274,12 +280,12 @@ export default function Scan() {
           {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
           {uri ? <AppButton title="Run diagnosis" loading={loading} onPress={runPrediction} /> : null}
         </>
-      ) : (
+      ) : !selectedAsset || !model ? (
         <AppCard>
           <AppText variant="headline">Select an asset to begin</AppText>
           <AppText style={styles.muted}>Create an animal or crop/field in Farm first, then return here to run its configured intelligence model.</AppText>
         </AppCard>
-      )}
+      ) : modelComingSoon ? null : null}
 
       {prediction && model ? (
         <AppCard>

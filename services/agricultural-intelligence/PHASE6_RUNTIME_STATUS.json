@@ -1,0 +1,74 @@
+{
+  "phase": "6-production-model-integration",
+  "status": "PREDICTION_RUNTIME_VERIFIED_REPORT_GEMINI_BLOCKED",
+  "sourceRepositoriesMutated": false,
+  "runtimeRunId": 36630547305,
+  "verifiedModels": [
+    {
+      "subject": "Apple",
+      "model": "Black Rot",
+      "prediction": "healthy",
+      "confidence": 100
+    },
+    {
+      "subject": "Maize",
+      "model": "Leaf Blight",
+      "prediction": "Leaf Blight",
+      "confidence": 100
+    },
+    {
+      "subject": "Grape",
+      "model": "Black Rot",
+      "prediction": "Black rot",
+      "confidence": 99.88
+    },
+    {
+      "subject": "Potatoes",
+      "model": "Late Blight",
+      "prediction": "Late blight",
+      "confidence": 100
+    },
+    {
+      "subject": "Pepper",
+      "model": "Bacterial Spot",
+      "prediction": "Bacterial spot",
+      "confidence": 99.64
+    },
+    {
+      "subject": "Tomato",
+      "model": "Spider Mites",
+      "prediction": "healthy",
+      "confidence": 100
+    },
+    {
+      "subject": "Spinach",
+      "model": "Anthracnose",
+      "prediction": "Healthy",
+      "confidence": 98.06
+    },
+    {
+      "subject": "Cattle",
+      "model": "Lumpy Skin classifier",
+      "prediction": "lumpy",
+      "confidence": 100
+    },
+    {
+      "subject": "Chicken",
+      "model": "Poultry Faeces",
+      "prediction": "Coccidiosis",
+      "confidence": 89.83
+    }
+  ],
+  "report": {
+    "status": "BLOCKED",
+    "reason": "GEMINI_API_KEY is not configured in GitHub Actions",
+    "structuredReportVerified": false
+  },
+  "integration": {
+    "predictionClientVerified": true,
+    "actualPredictionPreferredForReports": true,
+    "verifiedModelsExposedAs": "prediction_verified",
+    "reportUiGatedUntil": "available"
+  },
+  "note": "Prediction labels/confidences are runtime outputs only; they are not accuracy claims."
+}

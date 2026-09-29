@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { getFirestoreDb } from '@/services/firebase/client';
+import { stripUndefined } from '@/utils/firestore';
 
 export type FarmRecordType = 'animals' | 'crops' | 'healthRecords' | 'tasks' | 'feedingPlans' | 'marketplace';
 

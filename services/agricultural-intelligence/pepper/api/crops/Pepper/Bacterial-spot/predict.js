@@ -24,8 +24,8 @@ async function loadModel() {
     process.cwd(),
     "models",
     "crops",
-    "pepper",
-    "Bacterial_spot",
+    "Pepper ",
+    "Bacterial spot",
     "model.json"
   );
 

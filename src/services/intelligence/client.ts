@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { IntelligenceModel } from './catalog';
 import { INTELLIGENCE_SERVICES } from './catalog';
 
@@ -10,6 +11,33 @@ export type PredictionResult = {
   confidence: number;
   [key: string]: unknown;
 };
+
+const PredictionResponseSchema = z.object({
+  success: z.boolean().optional(),
+  prediction: z.string().optional(),
+  disease: z.string().optional(),
+  class: z.string().optional(),
+  label: z.string().optional(),
+  confidence: z.union([z.number(), z.string()]).optional(),
+}).passthrough();
+
+export function parsePredictionResponse(raw: unknown): PredictionResult {
+  const parsed = PredictionResponseSchema.safeParse(raw);
+  if (!parsed.success) throw new Error('Prediction service returned an invalid response.');
+
+  const confidenceValue = parsed.data.confidence;
+  const confidence = typeof confidenceValue === 'number'
+    ? confidenceValue
+    : confidenceValue === undefined
+      ? NaN
+      : Number(confidenceValue);
+
+  if (!Number.isFinite(confidence)) {
+    throw new Error('Prediction service returned an invalid confidence value.');
+  }
+
+  return { ...parsed.data, confidence } as PredictionResult;
+}
 
 export function normalizePredictionLabel(result: PredictionResult, model: IntelligenceModel) {
   const raw = String(result.disease ?? result.prediction ?? result.class ?? result.label ?? 'Unknown').trim();
@@ -34,12 +62,12 @@ export async function predict(model: IntelligenceModel, uri: string): Promise<Pr
     body: form,
   });
 
-  const data = await response.json();
-  if (!response.ok || data?.success === false) {
-    throw new Error(data?.error ?? 'Prediction service failed.');
+  const raw: unknown = await response.json();
+  if (!response.ok) {
+    const message = raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'string' ? raw.error : 'Prediction service failed.';
+    throw new Error(message);
   }
-
-  return data as PredictionResult;
+  return parsePredictionResponse(raw);
 }
 
 export async function generateReport(model: IntelligenceModel, input: {
@@ -58,10 +86,10 @@ export async function generateReport(model: IntelligenceModel, input: {
     body: JSON.stringify(input),
   });
 
-  const data = await response.json();
-  if (!response.ok || data?.success === false) {
-    throw new Error(data?.error ?? 'Report service failed.');
+  const raw: unknown = await response.json();
+  if (!response.ok) {
+    const message = raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'string' ? raw.error : 'Report service failed.';
+    throw new Error(message);
   }
-
-  return data;
+  return raw;
 }

@@ -76,6 +76,19 @@ export const authService = {
     });
     return credential.user;
   },
+  async reloadCurrentUser() {
+    const user = getFirebaseAuth().currentUser;
+    if (!user) return null;
+    await user.reload();
+    return getFirebaseAuth().currentUser;
+  },
+  async resendVerification() {
+    const user = getFirebaseAuth().currentUser;
+    if (!user) throw new Error('Your session has expired. Please sign in again.');
+    if (user.emailVerified) return user;
+    await sendEmailVerification(user);
+    return user;
+  },
   async signInWithGoogle() {
     const GoogleSignin = configureGoogle();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });

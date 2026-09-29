@@ -35,8 +35,8 @@ jobs:
             image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Exserohilum%20turcicum%20on%20Zea%20mays.jpg
           - service: potatoes
             subject: Potatoes
-            predict: api/crops/Potatoes%20/late_blight/predict.js
-            report: api/crops/Potatoes%20/late_blight/generate-report.js
+            predict: "api/crops/Potatoes /late_blight/predict.js"
+            report: "api/crops/Potatoes /late_blight/generate-report.js"
             image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Potato%20field%20heavily%20infected%20by%20P.%20infestans.JPG
           - service: pepper
             subject: Pepper

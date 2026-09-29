@@ -13,11 +13,11 @@ export default async function handler(req, res) {
     );
 
     const {
-      disease = "Fall Armyworm",
+      disease = "Unknown",
       confidence = 0,
       country = "",
       district = "",
-      cropOrAnimal = "Maize"
+      cropOrAnimal = "Cattle"
     } = req.body;
 
     const geminiResponse = await fetch(

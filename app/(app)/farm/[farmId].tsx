@@ -110,7 +110,7 @@ export default function FarmDetail() {
 
       <TextInput value={name} onChangeText={setName} placeholder="Farm name" placeholderTextColor={colors.textTertiary} style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]} />
       <OptionPicker label="Farm type" options={FARM_TYPES} selected={FARM_TYPES.find(option => option.label === farmType)?.id ?? ''} onChange={id => setFarmType(FARM_TYPES.find(option => option.id === id)?.label ?? '')} />
-      <LocationPicker label="Farm location" value={location} onSelect={next => { setLocation(next.label); setLatitude(next.latitude); setLongitude(next.longitude); }} />
+      <LocationPicker value={location} onSelect={next => { setLocation(next.label); setLatitude(next.latitude); setLongitude(next.longitude); }} />
       <View style={styles.row}>
         <TextInput value={size} onChangeText={setSize} keyboardType="decimal-pad" placeholder="Farm size" placeholderTextColor={colors.textTertiary} style={[styles.input, styles.grow, { color: colors.textPrimary, borderColor: colors.border }]} />
         <TextInput value={sizeUnit} onChangeText={setSizeUnit} placeholder="Unit" placeholderTextColor={colors.textTertiary} style={[styles.input, styles.grow, { color: colors.textPrimary, borderColor: colors.border }]} />

@@ -10,7 +10,31 @@ const db = () => getFirestoreDb();
 
 export async function listFarms(ownerId: string): Promise<Farm[]> {
   const snapshot = await getDocs(query(collection(db(), 'farms'), where('ownerId', '==', ownerId)));
-  return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  return snapshot.docs.map(item => {
+    const data = item.data();
+    if (
+      typeof data.ownerId !== 'string' ||
+      typeof data.name !== 'string' ||
+      typeof data.createdAt !== 'string'
+    ) {
+      throw new Error(`Invalid farm record: ${item.id}`);
+    }
+
+    return {
+      id: item.id,
+      ownerId: data.ownerId,
+      name: data.name,
+      location: typeof data.location === 'string' ? data.location : undefined,
+      latitude: typeof data.latitude === 'number' ? data.latitude : undefined,
+      longitude: typeof data.longitude === 'number' ? data.longitude : undefined,
+      description: typeof data.description === 'string' ? data.description : undefined,
+      size: typeof data.size === 'number' ? data.size : undefined,
+      sizeUnit: typeof data.sizeUnit === 'string' ? data.sizeUnit : undefined,
+      farmType: typeof data.farmType === 'string' ? data.farmType : undefined,
+      createdAt: data.createdAt,
+      updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : undefined,
+    };
+  });
 }
 
 export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id' | 'ownerId' | 'createdAt'> & Pick<Farm, 'name'>) {

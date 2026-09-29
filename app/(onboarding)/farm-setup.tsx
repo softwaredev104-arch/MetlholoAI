@@ -94,6 +94,7 @@ export default function FarmSetup() {
         termsAcceptedAt: new Date().toISOString(),
         privacyAcceptedAt: new Date().toISOString(),
       });
+      await activateTestSubscription(firebaseUser.uid);
       await completeOnboarding(firebaseUser.uid);
       router.replace('/');
     } catch (error) {

@@ -22,6 +22,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /farms/{farmId} {
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid;
+      allow read, update, delete: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /farms/{farmId}/{recordCollection}/{recordId} {
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.farmId == farmId;
+      allow read, update, delete: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && resource.data.farmId == farmId;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

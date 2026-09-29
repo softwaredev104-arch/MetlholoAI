@@ -1,5 +1,6 @@
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, initializeAuth, type Auth } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getFirebaseConfig, isFirebaseConfigured } from '@/config/env';
@@ -17,10 +18,26 @@ export function getFirebaseApp() {
 
 export function getFirebaseAuth() {
   if (!auth) {
-    // Firebase JS SDK 12.x automatically uses its React Native persistence
-    // adapter when AsyncStorage is installed. The explicit
-    // getReactNativePersistence helper is no longer exported by this SDK.
-    auth = getAuth(getFirebaseApp());
+    const firebaseApp = getFirebaseApp();
+    try {
+      // Firebase 12.19.0 exposes the React Native persistence helper at runtime,
+      // while its TypeScript declarations do not export it. Resolve it dynamically
+      // so auth state persists with the installed AsyncStorage v2.
+      const getReactNativePersistence = (require('firebase/auth') as typeof import('firebase/auth') & {
+        getReactNativePersistence?: (storage: typeof ReactNativeAsyncStorage) => unknown;
+      }).getReactNativePersistence;
+
+      if (getReactNativePersistence) {
+        auth = initializeAuth(firebaseApp, {
+          persistence: getReactNativePersistence(ReactNativeAsyncStorage) as Parameters<typeof initializeAuth>[1]['persistence'],
+        });
+      } else {
+        auth = getAuth(firebaseApp);
+      }
+    } catch {
+      // Hot reload can leave an Auth instance registered already.
+      auth = getAuth(firebaseApp);
+    }
   }
 
   return auth;

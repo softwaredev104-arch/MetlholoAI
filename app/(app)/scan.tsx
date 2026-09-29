@@ -161,7 +161,7 @@ export default function Scan() {
         category: 'Animal health check',
         status: 'open',
         notes: `Created from MetlholoAI diagnosis. Asset: ${assetLabel(selectedAsset)}. Model: ${model.name}. Confidence: ${normalizeConfidence(prediction.confidence).toFixed(1)}%.`,
-      } as never);
+      });
       Alert.alert('Task created', 'A follow-up farm task was added to your task list.');
     } catch (error) {
       Alert.alert('Could not create task', error instanceof Error ? error.message : 'Please try again.');

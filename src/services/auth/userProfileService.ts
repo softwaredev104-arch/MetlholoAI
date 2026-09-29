@@ -9,8 +9,12 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function updateUserProfile(uid: string, patch: Partial<UserProfile>) {
+  const definedPatch = Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  );
+
   await updateDoc(doc(getFirestoreDb(), 'users', uid), {
-    ...patch,
+    ...definedPatch,
     updatedAt: serverTimestamp(),
   });
 }

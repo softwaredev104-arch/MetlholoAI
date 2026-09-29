@@ -6,6 +6,10 @@ export type FarmRecordType = 'animals' | 'crops' | 'healthRecords' | 'tasks' | '
 export type Farm = { id: string; ownerId: string; name: string; location?: string; latitude?: number; longitude?: number; description?: string; size?: number; sizeUnit?: string; farmType?: string; createdAt: string; updatedAt?: string; };
 export type FarmRecord = { id: string; ownerId: string; farmId: string; type: FarmRecordType; name: string; notes?: string; status?: string; quantity?: number; unit?: string; createdAt: string; [key: string]: unknown; };
 
+export function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Partial<T>;
+}
+
 const db = () => getFirestoreDb();
 
 export async function listFarms(ownerId: string): Promise<Farm[]> {
@@ -39,9 +43,7 @@ export async function listFarms(ownerId: string): Promise<Farm[]> {
 
 export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id' | 'ownerId' | 'createdAt'> & Pick<Farm, 'name'>) {
   const createdAt = new Date().toISOString();
-  const definedInput = Object.fromEntries(
-    Object.entries(input).filter(([, value]) => value !== undefined),
-  );
+  const definedInput = stripUndefined(input);
   const ref = await addDoc(collection(db(), 'farms'), { ...definedInput, ownerId, createdAt });
   return { id: ref.id, ownerId, ...definedInput, createdAt } as Farm;
 }
@@ -49,9 +51,7 @@ export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id
 export async function updateFarm(ownerId: string, farmId: string, input: Partial<Omit<Farm, 'id' | 'ownerId' | 'createdAt'>>) {
   const snapshot = await getDocs(query(collection(db(), 'farms'), where('ownerId', '==', ownerId)));
   if (!snapshot.docs.some(item => item.id === farmId)) throw new Error('Farm not found.');
-  const definedInput = Object.fromEntries(
-    Object.entries(input).filter(([, value]) => value !== undefined),
-  );
+  const definedInput = stripUndefined(input);
   await updateDoc(doc(db(), 'farms', farmId), { ...definedInput, updatedAt: new Date().toISOString() });
 }
 

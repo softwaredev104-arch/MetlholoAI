@@ -43,13 +43,16 @@ export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id
     Object.entries(input).filter(([, value]) => value !== undefined),
   );
   const ref = await addDoc(collection(db(), 'farms'), { ...definedInput, ownerId, createdAt });
-  return { id: ref.id, ownerId, ...input, createdAt } as Farm;
+  return { id: ref.id, ownerId, ...definedInput, createdAt } as Farm;
 }
 
 export async function updateFarm(ownerId: string, farmId: string, input: Partial<Omit<Farm, 'id' | 'ownerId' | 'createdAt'>>) {
   const snapshot = await getDocs(query(collection(db(), 'farms'), where('ownerId', '==', ownerId)));
   if (!snapshot.docs.some(item => item.id === farmId)) throw new Error('Farm not found.');
-  await updateDoc(doc(db(), 'farms', farmId), { ...input, updatedAt: new Date().toISOString() });
+  const definedInput = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+  await updateDoc(doc(db(), 'farms', farmId), { ...definedInput, updatedAt: new Date().toISOString() });
 }
 
 const FARM_RECORD_TYPES: FarmRecordType[] = ['animals', 'crops', 'healthRecords', 'tasks', 'feedingPlans', 'marketplace'];
@@ -75,12 +78,18 @@ export async function listFarmRecords(ownerId: string, farmId: string, type: Far
 
 export async function createFarmRecord(ownerId: string, farmId: string, type: FarmRecordType, input: Omit<FarmRecord, 'id' | 'ownerId' | 'farmId' | 'type' | 'createdAt'>) {
   const createdAt = new Date().toISOString();
-  const ref = await addDoc(collection(db(), 'farms', farmId, type), { ...input, ownerId, farmId, type, createdAt });
-  return { id: ref.id, ...input, ownerId, farmId, type, createdAt } as FarmRecord;
+  const definedInput = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+  const ref = await addDoc(collection(db(), 'farms', farmId, type), { ...definedInput, ownerId, farmId, type, createdAt });
+  return { id: ref.id, ...definedInput, ownerId, farmId, type, createdAt } as FarmRecord;
 }
 
 export async function updateFarmRecord(farmId: string, type: FarmRecordType, id: string, input: Partial<FarmRecord>) {
-  await updateDoc(doc(db(), 'farms', farmId, type, id), { ...input, updatedAt: new Date().toISOString() });
+  const definedInput = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+  await updateDoc(doc(db(), 'farms', farmId, type, id), { ...definedInput, updatedAt: new Date().toISOString() });
 }
 
 export async function deleteFarmRecord(farmId: string, type: FarmRecordType, id: string) {

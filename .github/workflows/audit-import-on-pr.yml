@@ -1,0 +1,57 @@
+name: Audit Imported Agricultural Foundations
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - foundation/metlholoai-react-native
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Build audit manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          root="services/agricultural-intelligence"
+          rows=[]
+          for name in sorted(os.listdir(root)):
+              base=os.path.join(root,name)
+              if not os.path.isdir(base): continue
+              files=[]
+              for dp,dns,fns in os.walk(base):
+                  dns[:] = [d for d in dns if d not in {'.git','node_modules','.next','dist','build','coverage'}]
+                  for fn in fns: files.append(os.path.relpath(os.path.join(dp,fn),base))
+              rows.append({
+                "service":name,
+                "fileCount":len(files),
+                "hasPackageJson":"package.json" in files,
+                "hasModelJson":any(os.path.basename(f).lower()=="model.json" for f in files),
+                "hasMetadata":any(os.path.basename(f).lower()=="metadata.json" for f in files),
+                "predictionFiles":[f for f in files if os.path.basename(f).lower() in {"predict.js","predict.ts","prediction.js","prediction.ts"}],
+                "reportFiles":[f for f in files if "report" in os.path.basename(f).lower()],
+                "geminiFiles":[f for f in files if "gemini" in f.lower()],
+                "modelFiles":[f for f in files if f.lower().endswith((".bin",".h5",".keras",".onnx",".pt",".pth",".tflite"))],
+                "provenanceFile":os.path.exists(os.path.join(base,"FOUNDATION_PROVENANCE.json"))
+              })
+          with open(root+"/FOUNDATION_AUDIT.json","w") as f:
+              json.dump({"status":"AUDITED_IMPORTED_FOUNDATIONS","services":rows},f,indent=2)
+          PY
+      - name: Commit audit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/agricultural-intelligence/FOUNDATION_AUDIT.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(phase6): record imported foundation audit"
+          git push origin HEAD:${{ github.head_ref }}

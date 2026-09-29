@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.myjobe.Metlholoai",
-      "googleServicesFile": "./android/app/google-services.json"
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",

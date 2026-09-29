@@ -1,10 +1,7 @@
 name: Execute Agricultural Foundation Import
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches:
-      - foundation/metlholoai-react-native
+  workflow_dispatch:
 
 permissions:
   contents: write

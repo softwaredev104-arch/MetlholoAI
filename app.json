@@ -17,11 +17,21 @@
     "plugins": [
       "expo-router",
       [
+        "@react-native-google-signin/google-signin",
+        {}
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "MetlholoAI uses your photos for agricultural diagnosis.",
+          "photosPermission": "MetlholoAI uses your photos for agricultural diagnosis and your profile image.",
           "cameraPermission": "MetlholoAI uses your camera for agricultural diagnosis.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MetlholoAI uses your location to personalize weather and farm intelligence."
         }
       ],
       [

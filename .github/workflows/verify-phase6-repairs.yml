@@ -1,0 +1,39 @@
+name: Verify Phase 6 Repairs
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - foundation/metlholoai-react-native
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Syntax and contract verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            services/agricultural-intelligence/apple/api/crops/Apple/black_rot/predict.js
+            services/agricultural-intelligence/maize/api/crops/maize/leaf_blight/predict.js
+            services/agricultural-intelligence/general/api/livestock/cattle/lumpy-skin-disease/predict.js
+            services/agricultural-intelligence/general/api/livestock/cattle/lumpy-skin-disease/generate-report.js
+            services/agricultural-intelligence/poultry/api/livestock/poultry/generate-report.js
+          )
+          for f in "${files[@]}"; do node --check "$f"; done
+          test -f "services/agricultural-intelligence/apple/models/crops/Apple /Black_rot/model.json"
+          test -f "services/agricultural-intelligence/maize/models/crops/maize/Leaf Blight/model.json"
+          test -f "services/agricultural-intelligence/general/models/livestock/cattle/lumpy-skin-disease/model.json"
+          test -f "services/agricultural-intelligence/poultry/models/livestock/poultry/model.json"
+          for s in apple tomato spinach poultry; do
+            grep -q '"node_modules/@tensorflow/tfjs-node"' "services/agricultural-intelligence/$s/package-lock.json"
+          done
+          ! grep -R 'GEMINI_API_KEY.*=.*["'\''"]' services/agricultural-intelligence/{poultry,general} --include='*.js' >/dev/null
+          echo "PHASE6_REPAIR_VERIFICATION=PASS"

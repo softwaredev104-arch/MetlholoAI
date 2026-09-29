@@ -40,7 +40,7 @@ export function parsePredictionResponse(raw: unknown): PredictionResult {
 }
 
 export function normalizePredictionLabel(result: PredictionResult, model: IntelligenceModel) {
-  const raw = String(result.disease ?? result.prediction ?? result.class ?? result.label ?? 'Unknown').trim();
+  const raw = String(result.prediction ?? result.disease ?? result.class ?? result.label ?? 'Unknown').trim();
   if (model.id === 'cattle-health-classifier') {
     const normalized = raw.toLowerCase().replace(/[_-]+/g, ' ');
     if (normalized.includes('lumpy')) return 'Lumpy Skin Disease';

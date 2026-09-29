@@ -1,0 +1,72 @@
+name: Execute Agricultural Foundation Import
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MetlholoAI
+        uses: actions/checkout@v4
+        with:
+          ref: audit/model-integration-phase6
+          fetch-depth: 1
+
+      - name: Import all read-only foundations sequentially
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p services/agricultural-intelligence /tmp/agri-foundations
+          declare -a items=(
+            "general|loetolex/Botswana-Agricultural-Intelligence-Platform"
+            "maize|loetolex/Botswana-Agricultural-Intelligence-Platform-main-maize"
+            "grape|loetolex/Botswana-Agricultural-Intelligence-Platform-Grape"
+            "apple|loetolex/Botswana-Agricultural-Intelligence-Platform-Apple"
+            "potatoes|loetolex/Botswana-Agricultural-Intelligence-Platform-Potatoes-"
+            "pepper|loetolex/Botswana-Agricultural-Intelligence-Platform-Pepper"
+            "tomato|loetolex/Botswana-Agricultural-Intelligence-Platform-main-tomato-"
+            "spinach|loetolex/Botswana-Agricultural-Intelligence-Platform-main-tomato-spinach"
+            "poultry|loetolex/Botswana-Agricultural-Intelligence-Platform-main-tomato-poultry"
+          )
+
+          for item in "${items[@]}"; do
+            key="${item%%|*}"
+            repo="${item#*|}"
+            src="/tmp/agri-foundations/$key"
+            target="services/agricultural-intelligence/$key"
+            rm -rf "$src"
+            git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${repo}.git" "$src"
+            rm -rf "$target"
+            mkdir -p "$target"
+            rsync -a --delete \
+              --exclude='.git/' --exclude='node_modules/' --exclude='.next/' \
+              --exclude='dist/' --exclude='build/' --exclude='coverage/' \
+              "$src/" "$target/"
+            cat > "$target/FOUNDATION_PROVENANCE.json" <<EOF
+          {
+            "sourceRepository": "${repo}",
+            "sourceRef": "main",
+            "importedInto": "softwaredev104-arch/MetlholoAI",
+            "targetPath": "services/agricultural-intelligence/${key}",
+            "status": "IMPORTED_FOR_AUDIT",
+            "sourceRepositoryMutation": false
+          }
+          EOF
+          done
+
+      - name: Commit complete reconstruction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/agricultural-intelligence
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(phase6): execute agricultural foundation import"
+          git push origin HEAD:audit/model-integration-phase6

@@ -1,0 +1,81 @@
+name: Phase 6 Real Model Runtime and Gemini Verification
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - foundation/metlholoai-react-native
+
+permissions:
+  contents: read
+
+# Phase 6 runtime gate: prediction first; Gemini runs automatically when GEMINI_API_KEY is configured.
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: apple
+            subject: Apple
+            predict: api/crops/Apple/black_rot/predict.js
+            report: api/crops/Apple/black_rot/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Botryosphaeria%20obtusa.jpg
+          - service: grape
+            subject: Grape
+            predict: api/crops/Grape/black_rot/predict.js
+            report: api/crops/Grape/black_rot/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Black_rot_on_grape.jpg
+          - service: maize
+            subject: Maize
+            predict: api/crops/maize/leaf_blight/predict.js
+            report: api/crops/maize/leaf_blight/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Exserohilum%20turcicum%20on%20Zea%20mays.jpg
+          - service: potatoes
+            subject: Potatoes
+            predict: "api/crops/Potatoes /late_blight/predict.js"
+            report: "api/crops/Potatoes /late_blight/generate-report.js"
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Potato%20field%20heavily%20infected%20by%20P.%20infestans.JPG
+          - service: pepper
+            subject: Pepper
+            predict: api/crops/Pepper/Bacterial-spot/predict.js
+            report: api/crops/Pepper/Bacterial-spot/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Bacterial%20leaf%20spot%20of%20pepper%20%28Capsicum%20sp.%29%20%2843614805831%29.jpg
+          - service: tomato
+            subject: Tomato
+            predict: api/crops/tomato/Spider_mites/predict.js
+            report: api/crops/tomato/Spider_mites/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Solanum%20lycopersicum%20-%20spider%20mite%20-Clemson%20University%20-%20USDA.jpg
+          - service: spinach
+            subject: Spinach
+            predict: api/crops/spinach/anthracnose/predict.js
+            report: api/crops/spinach/anthracnose/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Spinach-%20Cercospora%20leaf%20spot.jpg
+          - service: general
+            subject: Cattle
+            predict: api/livestock/cattle/lumpy-skin-disease/predict.js
+            report: api/livestock/cattle/lumpy-skin-disease/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Lumpy%20Skin%20Disease%2001.jpg
+          - service: poultry
+            subject: Chicken
+            predict: api/livestock/poultry/predict.js
+            report: api/livestock/poultry/generate-report.js
+            image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Bird%20suffering%20Newcastle%20Disease.jpg
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: services/agricultural-intelligence/${{ matrix.service }}/package-lock.json
+      - name: Install service dependencies
+        working-directory: services/agricultural-intelligence/${{ matrix.service }}
+        run: npm ci --no-audit --no-fund
+      - name: Run real image prediction, confidence, Gemini report and structured report verification
+        run: node .github/scripts/phase6-runtime-test.js "services/agricultural-intelligence/${{ matrix.service }}" "${{ matrix.predict }}" "${{ matrix.report }}" "${{ matrix.image }}" "${{ matrix.subject }}"

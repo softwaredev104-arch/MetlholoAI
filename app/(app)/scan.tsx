@@ -55,6 +55,7 @@ export default function Scan() {
   const model = INTELLIGENCE_MODELS.find(item => item.id === modelId)
     ?? (subjectModels.length === 1 ? subjectModels[0] : null);
   const modelComingSoon = model?.availability === 'coming_soon';
+  const reportVerified = model?.availability === 'available';
 
   useEffect(() => {
     async function loadAssets() {
@@ -301,7 +302,8 @@ export default function Scan() {
             <AppText style={styles.muted}>Below the 95% alert threshold. Review the result carefully.</AppText>
           )}
           <View style={styles.actions}>
-            <AppButton title="Generate report" loading={loading} onPress={createReport} />
+            <AppButton title="Generate report" loading={loading} disabled={!reportVerified} onPress={createReport} />
+            {!reportVerified ? <AppText style={styles.muted}>Prediction is verified. Report/Gemini generation remains gated until the server-side Gemini credential is configured and the report contract is verified.</AppText> : null}
             <AppButton title="Create follow-up task" variant="secondary" loading={loading} onPress={createFollowUpTask} />
             <AppButton title={saved ? 'Diagnosis saved' : 'Save diagnosis'} variant="secondary" loading={loading} disabled={saved} onPress={saveDiagnosis} />
           </View>

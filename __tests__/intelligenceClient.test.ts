@@ -10,6 +10,7 @@ const cattle = {
   reportPath: '/api/livestock/cattle/generate-report',
   input: 'image' as const,
   trainingImageHints: [],
+  availability: 'coming_soon' as const,
 };
 
 describe('prediction response contract', () => {
@@ -26,8 +27,14 @@ describe('prediction response contract', () => {
     expect(() => parsePredictionResponse({ prediction: 'healthy', confidence: 'not-a-number' })).toThrow('invalid confidence');
   });
 
+  it('prefers actual prediction over endpoint disease label', () => {
+    expect(normalizePredictionLabel({ disease: 'Anthracnose', prediction: 'Healthy', confidence: 0.98 }, { ...cattle, id: 'spinach-anthracnose' })).toBe('Healthy');
+  });
+
   it('normalizes cattle disease labels', () => {
     expect(normalizePredictionLabel({ prediction: 'lumpy_skin_disease', confidence: 0.95 }, cattle)).toBe('Lumpy Skin Disease');
     expect(normalizePredictionLabel({ prediction: 'foot-and-mouth', confidence: 0.95 }, cattle)).toBe('Foot and Mouth Disease');
   });
 });
+
+// Phase 6 import trigger

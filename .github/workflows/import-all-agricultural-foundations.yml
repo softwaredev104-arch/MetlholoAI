@@ -1,0 +1,98 @@
+name: Import Agricultural Intelligence Foundations
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'MetlholoAI branch receiving the foundations'
+        required: true
+        default: 'audit/model-integration-phase6'
+
+permissions:
+  contents: write
+
+jobs:
+  import-foundations:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: general
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform
+            target: general
+          - key: maize
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-main-maize
+            target: maize
+          - key: grape
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-Grape
+            target: grape
+          - key: apple
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-Apple
+            target: apple
+          - key: potatoes
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-Potatoes-
+            target: potatoes
+          - key: pepper
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-Pepper
+            target: pepper
+          - key: tomato
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-main-tomato-
+            target: tomato
+          - key: spinach
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-main-tomato-spinach
+            target: spinach
+          - key: poultry
+            repo: loetolex/Botswana-Agricultural-Intelligence-Platform-main-tomato-poultry
+            target: poultry
+
+    steps:
+      - name: Checkout MetlholoAI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
+          path: metlholoai
+          fetch-depth: 1
+
+      - name: Checkout source foundation
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repo }}
+          ref: main
+          path: source
+          fetch-depth: 1
+
+      - name: Reconstruct foundation in MetlholoAI
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="metlholoai/services/agricultural-intelligence/${{ matrix.target }}"
+          mkdir -p "$target"
+
+          # Preserve the complete implemented foundation while excluding
+          # repository metadata and generated dependency/build directories.
+          rsync -a --delete             --exclude='.git/'             --exclude='node_modules/'             --exclude='.next/'             --exclude='dist/'             --exclude='build/'             --exclude='coverage/'             source/ "$target/"
+
+          # Record exact source provenance without changing the source repo.
+          cat > "$target/FOUNDATION_PROVENANCE.json" <<EOF
+          {
+            "sourceRepository": "${{ matrix.repo }}",
+            "sourceRef": "main",
+            "importedInto": "softwaredev104-arch/MetlholoAI",
+            "targetPath": "services/agricultural-intelligence/${{ matrix.target }}",
+            "status": "IMPORTED_FOR_AUDIT",
+            "sourceRepositoryMutation": false
+          }
+          EOF
+
+      - name: Commit reconstructed foundation
+        working-directory: metlholoai
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "services/agricultural-intelligence/${{ matrix.target }}"
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: import ${{ matrix.target }} agricultural intelligence foundation"
+          git push origin "HEAD:${{ inputs.target_branch }}"

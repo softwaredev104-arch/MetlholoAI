@@ -1,0 +1,68 @@
+name: Import Apple Intelligence Service
+
+on:
+  push:
+    branches:
+      - audit/model-integration-phase6
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-apple:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MetlholoAI
+        uses: actions/checkout@v6
+        with:
+          path: metlholoai
+
+      - name: Checkout Apple intelligence source
+        uses: actions/checkout@v6
+        with:
+          repository: loetolex/Botswana-Agricultural-Intelligence-Platform-Apple
+          ref: main
+          path: apple-source
+
+      - name: Import service source and model artifacts
+        working-directory: metlholoai
+        run: |
+          set -euo pipefail
+          target="services/agricultural-intelligence/apple"
+          rm -rf "$target"
+          mkdir -p "$target"
+          cp -R ../apple-source/api "$target/api"
+          cp -R "../apple-source/models" "$target/models"
+          cp ../apple-source/package.json "$target/package.json"
+          if [ -f ../apple-source/package-lock.json ]; then cp ../apple-source/package-lock.json "$target/package-lock.json"; fi
+          if [ -f ../apple-source/README.md ]; then cp ../apple-source/README.md "$target/README.md"; fi
+
+      - name: Add required Node TensorFlow runtime
+        working-directory: metlholoai/services/agricultural-intelligence/apple
+        run: |
+          npm pkg set dependencies.@tensorflow/tfjs-node="^4.22.0"
+          npm install --package-lock-only --ignore-scripts
+
+      - name: Repair Apple model path in imported prediction service
+        working-directory: metlholoai
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("services/agricultural-intelligence/apple/api/crops/Apple/black_rot/predict.js")
+          s = p.read_text()
+          old = '"Apple",\\n    "Black_rot"'
+          new = '"Apple ",\\n    "Black_rot"'
+          if old not in s:
+              raise SystemExit("Expected Apple model path was not found")
+          p.write_text(s.replace(old, new, 2))
+          PY
+
+      - name: Commit imported Apple service
+        working-directory: metlholoai
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/agricultural-intelligence/apple
+          git commit -m "feat: import Apple intelligence service and model" || exit 0
+          git push

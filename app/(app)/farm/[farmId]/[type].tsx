@@ -163,6 +163,14 @@ export default function FarmRecords() {
               {record.notes ? <AppText style={styles.notes}>{record.notes}</AppText> : null}
             </View>
             <View style={styles.actions}>
+              {(validType === 'animals' || validType === 'crops') ? (
+                <Pressable
+                  onPress={() => router.push({ pathname: '/scan', params: { recordType: validType, recordId: record.id } })}
+                  accessibilityRole="button"
+                >
+                  <AppText style={styles.link}>Diagnose</AppText>
+                </Pressable>
+              ) : null}
               <Pressable onPress={() => openEdit(record)} accessibilityRole="button">
                 <AppText style={styles.link}>Edit</AppText>
               </Pressable>

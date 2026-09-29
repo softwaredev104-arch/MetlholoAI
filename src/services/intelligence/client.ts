@@ -47,8 +47,7 @@ export function normalizePredictionLabel(result: PredictionResult, model: Intell
     if (normalized.includes('foot') && normalized.includes('mouth')) return 'Foot and Mouth Disease';
     if (normalized === 'healthy' || normalized.includes('normal')) return 'Healthy';
   }
-  if (!raw || typeof raw !== 'object') throw new Error('Report service returned an invalid response.');
-  return raw as ReportResponse;
+  return raw;
 }
 
 export async function predict(model: IntelligenceModel, uri: string): Promise<PredictionResult> {
@@ -98,5 +97,6 @@ export async function generateReport(model: IntelligenceModel, input: {
     const message = raw && typeof raw === 'object' && 'error' in raw && typeof raw.error === 'string' ? raw.error : 'Report service failed.';
     throw new Error(message);
   }
-  return raw;
+  if (!raw || typeof raw !== 'object') throw new Error('Report service returned an invalid response.');
+  return raw as ReportResponse;
 }

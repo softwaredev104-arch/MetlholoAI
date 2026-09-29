@@ -11,6 +11,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import Constants from 'expo-constants';
 import { getFirebaseAuth, getFirestoreDb } from '@/services/firebase/client';
 import type { Role, UserProfile } from '@/types/user';
 
@@ -19,11 +20,17 @@ type GoogleSigninModule = typeof import('@react-native-google-signin/google-sign
 let googleConfigured = false;
 
 function getGoogleSignin(): GoogleSigninModule['GoogleSignin'] {
+  if (Constants.appOwnership === 'expo') {
+    throw new Error(
+      'Google Sign-In requires a MetlholoAI development build. Expo Go does not include the native Google Sign-In module. Run `npx expo run:android` or `npx expo run:ios`.',
+    );
+  }
+
   try {
     return require('@react-native-google-signin/google-signin').GoogleSignin as GoogleSigninModule['GoogleSignin'];
   } catch {
     throw new Error(
-      'Google Sign-In is unavailable in this app binary. For native Google Sign-In, rebuild MetlholoAI with `npx expo run:android` or `npx expo run:ios`; Expo Go does not include the Google Sign-In native module.',
+      'Google Sign-In is unavailable in this app binary. Rebuild MetlholoAI with `npx expo run:android` or `npx expo run:ios`.',
     );
   }
 }

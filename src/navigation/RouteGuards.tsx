@@ -1,4 +1,5 @@
-import { PropsWithChildren, useEffect } from 'react';
+import { useEffect } from 'react';
+import type { PropsWithChildren } from 'react';
 import { router, useSegments } from 'expo-router';
 import { AppLoadingState } from '@/components/ui/AppLoadingState';
 import { useAuth } from '@/auth/AuthProvider';

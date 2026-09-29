@@ -57,6 +57,7 @@ export default function SignUp() {
         <AppTextField label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
         {error ? <AppText variant="footnote" accessibilityLiveRegion="polite" style={{ color: colors.error }}>{error}</AppText> : null}
         <AppButton title="Create Account" onPress={submit} loading={loading} />
+        <AppButton title="Continue with Google" variant="secondary" onPress={async () => { setError(''); setLoading(true); try { await authService.signInWithGoogle(); router.replace('/'); } catch (e) { setError(getFriendlyErrorMessage(e)); } finally { setLoading(false); } }} loading={loading} />
       </View>
     </AppScreen>
   );

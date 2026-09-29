@@ -72,12 +72,12 @@ export default function Scan() {
   }, [firebaseUser?.uid]);
 
   useEffect(() => {
-    if (recordType === 'animals' && !recordId && animals.length === 1) setRecordId(animals[0]?.id);
-    if (recordType === 'crops' && !recordId && crops.length === 1) setRecordId(crops[0]?.id);
+    if (recordType === 'animals' && !recordId && animals.length === 1) { const onlyAnimal = animals[0]; if (onlyAnimal) setRecordId(onlyAnimal.id); }
+    if (recordType === 'crops' && !recordId && crops.length === 1) { const onlyCrop = crops[0]; if (onlyCrop) setRecordId(onlyCrop.id); }
   }, [animals, crops, recordId, recordType]);
 
   useEffect(() => {
-    if (subjectModels.length === 1 && !modelId) setModelId(subjectModels[0]?.id);
+    if (subjectModels.length === 1 && !modelId) { const onlyModel = subjectModels[0]; if (onlyModel) setModelId(onlyModel.id); }
   }, [modelId, subjectModels]);
 
   async function choose(source: 'camera' | 'library') {

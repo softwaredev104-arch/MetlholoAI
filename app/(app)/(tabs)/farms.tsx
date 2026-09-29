@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
@@ -22,12 +22,16 @@ export default function Farms() {
   const { firebaseUser } = useAuth();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     if (!firebaseUser) return;
     setLoading(true);
+    setError(null);
     try {
       setFarms(await listFarms(firebaseUser.uid));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Could not load your farm. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -37,10 +41,17 @@ export default function Farms() {
 
   async function addFarm() {
     if (!firebaseUser) return;
-    const farm = await createFarm(firebaseUser.uid, {
-      name: `${firebaseUser.displayName ?? 'My'} Farm`,
-    });
-    setFarms(current => [...current, farm]);
+    try {
+      const farm = await createFarm(firebaseUser.uid, {
+        name: `${firebaseUser.displayName ?? 'My'} Farm`,
+      });
+      setFarms(current => [...current, farm]);
+      setError(null);
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : 'Could not create your farm. Please try again.';
+      setError(message);
+      Alert.alert('Could not create farm', message);
+    }
   }
 
   const farm = farms[0];
@@ -51,6 +62,14 @@ export default function Farms() {
       <AppText style={styles.subtitle}>
         Your owner-scoped farm workspace for crops, animals, health, tasks, feeding and selling.
       </AppText>
+
+      {error ? (
+        <AppCard style={styles.errorCard}>
+          <AppText variant="headline">Farm workspace unavailable</AppText>
+          <AppText style={styles.muted}>{error}</AppText>
+          <AppButton title="Retry" variant="secondary" loading={loading} onPress={load} />
+        </AppCard>
+      ) : null}
 
       {!farm ? <AppButton title="Create your first farm" loading={loading} onPress={addFarm} /> : null}
 
@@ -99,4 +118,5 @@ const styles = StyleSheet.create({
   action: { minHeight: 138, justifyContent: 'space-between' },
   muted: { opacity: 0.65 },
   open: { marginTop: Spacing.sm, fontWeight: '700' },
+  errorCard: { marginBottom: Spacing.lg },
 });

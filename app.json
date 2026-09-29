@@ -1,1 +1,27 @@
-{"expo":{"name":"MetlholoAI","slug":"metlholoai","version":"0.1.0","orientation":"portrait","scheme":"metlholoai","userInterfaceStyle":"automatic","newArchEnabled":true,"ios":{"supportsTablet":true,"bundleIdentifier":"bw.metlholoai.app"},"android":{"package":"bw.metlholoai.app"},"plugins":["expo-router"],"experiments":{"typedRoutes":true},"extra":{"developer":"Bokang Jobe"}}}
+{
+  "expo": {
+    "name": "MetlholoAI",
+    "slug": "metlholoai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "metlholoai",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myjobe.Metlholoai"
+    },
+    "android": {
+      "package": "com.myjobe.Metlholoai"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "developer": "Bokang Jobe"
+    }
+  }
+}

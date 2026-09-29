@@ -5,9 +5,22 @@ export type PredictionResult = {
   success?: boolean;
   prediction?: string;
   disease?: string;
+  class?: string;
+  label?: string;
   confidence: number;
   [key: string]: unknown;
 };
+
+export function normalizePredictionLabel(result: PredictionResult, model: IntelligenceModel) {
+  const raw = String(result.disease ?? result.prediction ?? result.class ?? result.label ?? 'Unknown').trim();
+  if (model.id === 'cattle-health-classifier') {
+    const normalized = raw.toLowerCase().replace(/[_-]+/g, ' ');
+    if (normalized.includes('lumpy')) return 'Lumpy Skin Disease';
+    if (normalized.includes('foot') && normalized.includes('mouth')) return 'Foot and Mouth Disease';
+    if (normalized === 'healthy' || normalized.includes('normal')) return 'Healthy';
+  }
+  return raw;
+}
 
 export async function predict(model: IntelligenceModel, uri: string): Promise<PredictionResult> {
   const baseUrl = INTELLIGENCE_SERVICES[model.service as keyof typeof INTELLIGENCE_SERVICES];

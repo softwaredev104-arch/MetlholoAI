@@ -43,6 +43,7 @@ export default function Scan() {
   const [reference, setReference] = useState<DiagnosisReference | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const assets = recordType === 'animals' ? animals : crops;
   const selectedAsset = assets.find(item => item.id === recordId) ?? null;
@@ -57,6 +58,7 @@ export default function Scan() {
   useEffect(() => {
     async function loadAssets() {
       if (!firebaseUser) return;
+      setLoadError(null);
       const farms = await listFarms(firebaseUser.uid);
       const farm = farms[0];
       if (!farm) return;
@@ -68,7 +70,9 @@ export default function Scan() {
       setAnimals(animalRows);
       setCrops(cropRows);
     }
-    loadAssets().catch(() => undefined);
+    loadAssets().catch(error => {
+      setLoadError(error instanceof Error ? error.message : 'Could not load your farm assets. Please try again.');
+    });
   }, [firebaseUser?.uid]);
 
   useEffect(() => {
@@ -214,6 +218,8 @@ export default function Scan() {
         onChange={value => { setRecordType(String(value) as 'animals' | 'crops'); setRecordId(''); setModelId(''); }}
         searchable={false}
       />
+
+      {loadError ? <AppCard><AppText variant="headline">Farm assets unavailable</AppText><AppText style={styles.muted}>{loadError}</AppText></AppCard> : null}
 
       {recordType ? (
         <OptionPicker

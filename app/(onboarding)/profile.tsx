@@ -29,7 +29,7 @@ export default function ProfileOnboarding() {
 
   async function choosePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permission.status !== 'granted' && permission.status !== 'limited') {
+    if (permission.status !== 'granted') {
       Alert.alert('Photo permission required', 'Allow MetlholoAI to access your photos to choose a profile image.', [
         { text: 'Not now', style: 'cancel' },
         { text: 'Open Settings', onPress: () => Linking.openSettings() },

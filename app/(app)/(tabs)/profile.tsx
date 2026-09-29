@@ -10,6 +10,7 @@ import {
   getNotificationPermissionStatus,
   openNotificationSettings,
   requestNotificationPermission,
+  isNotificationPermissionGranted,
 } from '@/services/notifications/notifications';
 
 export default function Profile() {
@@ -20,9 +21,7 @@ export default function Profile() {
   async function refreshPermissions() {
     try {
       const settings = await getNotificationPermissionStatus();
-      setNotificationsGranted(
-        settings.granted || settings.ios?.status === 3 || settings.ios?.status === 4,
-      );
+      setNotificationsGranted(isNotificationPermissionGranted(settings));
     } catch {
       setNotificationsGranted(false);
     }
@@ -34,7 +33,7 @@ export default function Profile() {
     setLoading(true);
     try {
       const settings = await requestNotificationPermission();
-      const granted = settings.granted || settings.ios?.status === 3 || settings.ios?.status === 4;
+      const granted = isNotificationPermissionGranted(settings);
       setNotificationsGranted(granted);
       if (!granted) {
         Alert.alert(

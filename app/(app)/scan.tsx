@@ -172,7 +172,7 @@ export default function Scan() {
       const outcome = normalizePredictionLabel(prediction, model);
       await createFarmRecord(firebaseUser.uid, farmId, 'tasks', {
         name: `Follow up: ${outcome} — ${assetLabel(selectedAsset)}`,
-        category: 'Animal health check',
+        category: recordType === 'crops' ? 'Crop health check' : 'Animal health check',
         status: 'open',
         notes: `Created from MetlholoAI diagnosis. Asset: ${assetLabel(selectedAsset)}. Model: ${model.name}. Confidence: ${normalizeConfidence(prediction.confidence).toFixed(1)}%.`,
       });

@@ -11,7 +11,7 @@ import { OptionPicker } from '@/components/ui/OptionPicker';
 import { INTELLIGENCE_MODELS, getModelsForSubject, type IntelligenceModel } from '@/services/intelligence/catalog';
 import { predict, generateReport, normalizePredictionLabel, type PredictionResult } from '@/services/intelligence/client';
 import { createDiagnosis } from '@/services/intelligence/diagnosisRepository';
-import { listFarms, listFarmRecords, type FarmRecord, type FarmRecordType } from '@/services/farms/farmRepository';
+import { createFarmRecord, listFarms, listFarmRecords, type FarmRecord } from '@/services/farms/farmRepository';
 import { useAuth } from '@/auth/AuthProvider';
 import { Spacing } from '@/design/spacing';
 import { resolveDiagnosisReference } from '@/services/knowledge/diagnosisReference';
@@ -151,6 +151,25 @@ export default function Scan() {
     }
   }
 
+  async function createFollowUpTask() {
+    if (!prediction || !model || !selectedAsset || !firebaseUser || !farmId) return;
+    setLoading(true);
+    try {
+      const outcome = normalizePredictionLabel(prediction, model);
+      await createFarmRecord(firebaseUser.uid, farmId, 'tasks', {
+        name: `Follow up: ${outcome} — ${assetLabel(selectedAsset)}`,
+        category: 'Animal health check',
+        status: 'open',
+        notes: `Created from MetlholoAI diagnosis. Asset: ${assetLabel(selectedAsset)}. Model: ${model.name}. Confidence: ${normalizeConfidence(prediction.confidence).toFixed(1)}%.`,
+      } as never);
+      Alert.alert('Task created', 'A follow-up farm task was added to your task list.');
+    } catch (error) {
+      Alert.alert('Could not create task', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function saveDiagnosis() {
     if (!prediction || !model || !selectedAsset || !firebaseUser || !farmId) return;
     setLoading(true);
@@ -261,6 +280,7 @@ export default function Scan() {
           )}
           <View style={styles.actions}>
             <AppButton title="Generate report" loading={loading} onPress={createReport} />
+            <AppButton title="Create follow-up task" variant="secondary" loading={loading} onPress={createFollowUpTask} />
             <AppButton title={saved ? 'Diagnosis saved' : 'Save diagnosis'} variant="secondary" loading={loading} disabled={saved} onPress={saveDiagnosis} />
           </View>
         </AppCard>

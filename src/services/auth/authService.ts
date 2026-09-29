@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   GoogleAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -35,6 +36,7 @@ export const authService = {
   async signUp(email: string, password: string, displayName: string, role: Role) {
     const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
     await updateProfile(credential.user, { displayName: displayName.trim() });
+    await sendEmailVerification(credential.user);
     const profile: UserProfile = {
       uid: credential.user.uid,
       displayName: displayName.trim(),

@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 Notifications.setNotificationHandler({
@@ -37,6 +37,5 @@ export async function requestNotificationPermission() {
 }
 
 export async function openNotificationSettings() {
-  await Notifications.getPermissionsAsync();
-  return Notifications.requestPermissionsAsync();
+  await Linking.openSettings();
 }

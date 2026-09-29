@@ -5,23 +5,42 @@ import { useAuth } from '@/auth/AuthProvider';
 
 export function ProtectedRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
-  useEffect(() => {
-    if (status === 'UNAUTHENTICATED') router.replace('/(auth)/welcome');
-    if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
-    if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
-  }, [status]);
+  const segments = useSegments();
+  const segmentKey = segments.join('/');
+  const rootSegment = segments[0] ?? '';
 
-  if (status !== 'AUTHENTICATED') return <AppLoadingState />;
+  useEffect(() => {
+    if (status === 'UNAUTHENTICATED' && rootSegment !== '(auth)') {
+      router.replace('/(auth)/welcome');
+      return;
+    }
+
+    if (status === 'PROFILE_INCOMPLETE' && rootSegment !== '(onboarding)') {
+      router.replace('/(onboarding)/profile');
+      return;
+    }
+
+    if (status === 'ACCOUNT_SUSPENDED' && rootSegment !== 'suspended') {
+      router.replace('/suspended');
+    }
+  }, [status, rootSegment, segmentKey]);
+
+  if (status !== 'AUTHENTICATED' && status !== 'PROFILE_INCOMPLETE') {
+    return <AppLoadingState />;
+  }
+
   return children;
 }
 
 export function PublicRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
   const segments = useSegments();
-  const currentRoute = segments[segments.length - 1];
+  const segmentKey = segments.join('/');
+  const rootSegment = segments[0] ?? '';
+  const currentRoute = segments[segments.length - 1] ?? '';
 
   useEffect(() => {
-    if (status === 'AUTHENTICATED' && currentRoute !== '(tabs)') {
+    if (status === 'AUTHENTICATED' && rootSegment !== '(app)') {
       router.replace('/(app)/(tabs)');
       return;
     }
@@ -31,10 +50,10 @@ export function PublicRoute({ children }: PropsWithChildren) {
       return;
     }
 
-    if (status === 'PROFILE_INCOMPLETE' && segments[0] !== '(onboarding)') {
+    if (status === 'PROFILE_INCOMPLETE' && rootSegment !== '(onboarding)') {
       router.replace('/(onboarding)/profile');
     }
-  }, [status, currentRoute, segments]);
+  }, [status, rootSegment, currentRoute, segmentKey]);
 
   if (status === 'AUTHENTICATING') return <AppLoadingState />;
   return children;

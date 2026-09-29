@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "MetlholoAI",
+    "slug": "metlholoai",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "metlholoai",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myjobe.Metlholoai"
+    },
+    "android": {
+      "package": "com.myjobe.Metlholoai"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MetlholoAI uses your photos for agricultural diagnosis.",
+          "cameraPermission": "MetlholoAI uses your camera for agricultural diagnosis.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "developer": "Bokang Jobe"
+    }
+  }
+}

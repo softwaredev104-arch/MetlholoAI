@@ -25,7 +25,7 @@ export const INTELLIGENCE_SERVICES = {
   poultry: process.env.EXPO_PUBLIC_AI_POULTRY_BASE_URL ?? '',
 } as const;
 
-export const INTELLIGENCE_MODELS = [
+export const INTELLIGENCE_MODELS: IntelligenceModel[] = [
   { id: 'maize-leaf-spot', name: 'Leaf Spot', category: 'crops', subject: 'Maize', disease: 'Leaf Spot', service: 'maize', predictPath: '/api/crops/maize/Leaf-Spot/predict', reportPath: '/api/crops/maize/Leaf-Spot/generate-report', input: 'image', trainingImageHints: ['single leaf', 'sharp lesion detail', 'natural daylight'] },
   { id: 'maize-leafy-beetle', name: 'Leafy Beetle', category: 'crops', subject: 'Maize', disease: 'Leafy Beetle', service: 'maize', predictPath: '/api/crops/maize/Leafy-Beetle/predict', reportPath: '/api/crops/maize/Leafy-Beetle/generate-report', input: 'image', trainingImageHints: ['whole affected leaf', 'insect visible when possible', 'close focus'] },
   { id: 'maize-fall-armyworm', name: 'Fall Armyworm', category: 'crops', subject: 'Maize', disease: 'Fall Armyworm', service: 'maize', predictPath: '/api/crops/maize/fall-armyworm/predict', reportPath: '/api/crops/maize/fall-armyworm/generate-report', input: 'image', trainingImageHints: ['whorl or feeding damage', 'close focus', 'avoid blur'] },
@@ -47,7 +47,7 @@ export const INTELLIGENCE_MODELS = [
   { id: 'grape-black-measles', name: 'Black Measles', category: 'crops', subject: 'Grape', disease: 'Black Measles', service: 'grape', predictPath: '/api/crops/Grape/black_measles/predict', reportPath: '/api/crops/Grape/black_measles/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
   { id: 'grape-black-rot', name: 'Black Rot', category: 'crops', subject: 'Grape', disease: 'Black Rot', service: 'grape', predictPath: '/api/crops/Grape/black_rot/predict', reportPath: '/api/crops/Grape/black_rot/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
   { id: 'grape-isariopsis', name: 'Isariopsis Leaf Spot', category: 'crops', subject: 'Grape', disease: 'Isariopsis Leaf Spot', service: 'grape', predictPath: '/api/crops/Grape/isariopsis_leaf_spot/predict', reportPath: '/api/crops/Grape/isariopsis_leaf_spot/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
-] satisfies [IntelligenceModel, ...IntelligenceModel[]];
+];
 
 export function getModels(category: IntelligenceCategory) {
   return INTELLIGENCE_MODELS.filter(model => model.category === category);

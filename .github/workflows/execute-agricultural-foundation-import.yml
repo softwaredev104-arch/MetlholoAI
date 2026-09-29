@@ -1,21 +1,21 @@
 name: Execute Agricultural Foundation Import
 
 on:
-  push:
+  pull_request:
     branches:
-      - audit/model-integration-phase6
+      - foundation/metlholoai-react-native
 
 permissions:
   contents: write
 
 jobs:
   import-all:
-    if: github.event.head_commit.message != 'chore(phase6): execute agricultural foundation import'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout MetlholoAI
         uses: actions/checkout@v4
         with:
+          ref: audit/model-integration-phase6
           fetch-depth: 1
 
       - name: Import all read-only foundations sequentially

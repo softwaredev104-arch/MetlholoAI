@@ -39,7 +39,7 @@ const singular: Record<FarmRecordType, string> = {
 
 export default function FarmRecords() {
   const { colors } = useTheme();
-  const { farmId, type } = useLocalSearchParams<{ farmId: string; type: FarmRecordType }>();
+  const { farmId, type, editRecordId } = useLocalSearchParams<{ farmId: string; type: FarmRecordType; editRecordId?: string }>();
   const { firebaseUser } = useAuth();
   const [records, setRecords] = useState<FarmRecord[]>([]);
   const [search, setSearch] = useState('');
@@ -65,6 +65,12 @@ export default function FarmRecords() {
   }
 
   useEffect(() => { load(); }, [firebaseUser?.uid, farmId, validType]);
+
+  useEffect(() => {
+    if (!editRecordId || !records.length) return;
+    const record = records.find(item => item.id === editRecordId);
+    if (record) openEdit(record);
+  }, [editRecordId, records.length]);
 
   useEffect(() => {
     if (!firebaseUser || !farmId || !validType || !['healthRecords', 'tasks', 'feedingPlans'].includes(validType)) return;

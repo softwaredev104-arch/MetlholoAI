@@ -35,9 +35,17 @@ export default function Home() {
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const firstName = profile?.displayName?.split(' ')[0] ?? 'farmer';
 
+  const latitude = profile?.location?.latitude;
+  const longitude = profile?.location?.longitude;
+  const weatherLocation = profile?.location?.label ?? 'Botswana';
+
   useEffect(() => {
-    getCurrentWeather().then(setWeather).catch(() => setWeather(null));
-  }, []);
+    const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+    getCurrentWeather(
+      hasCoordinates ? latitude : undefined,
+      hasCoordinates ? longitude : undefined,
+    ).then(setWeather).catch(() => setWeather(null));
+  }, [latitude, longitude]);
 
   return (
     <AppScreen>
@@ -47,7 +55,7 @@ export default function Home() {
         </View>
         <View style={{ flex: 1 }}>
           <AppText variant="largeTitle">Hi, {firstName}</AppText>
-          <AppText style={{ color: colors.textSecondary }}>Botswana · Farm intelligence</AppText>
+          <AppText style={{ color: colors.textSecondary }}>{weatherLocation} · Farm intelligence</AppText>
         </View>
       </View>
 

@@ -49,6 +49,7 @@ export default function SignIn() {
         <AppTextField label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
         {error ? <AppText variant="footnote" accessibilityLiveRegion="polite" style={{ color: colors.error }}>{error}</AppText> : null}
         <AppButton title="Sign In" onPress={submit} loading={loading} />
+        <AppButton title="Continue with Google" variant="secondary" onPress={async () => { setError(''); setLoading(true); try { await authService.signInWithGoogle(); router.replace('/'); } catch (e) { setError(getFriendlyErrorMessage(e)); } finally { setLoading(false); } }} loading={loading} />
         <Link href="/(auth)/forgot-password" style={{ textAlign: 'center', color: colors.primary }}>Forgot password?</Link>
         <Link href="/(auth)/sign-up" style={{ textAlign: 'center', color: colors.primary }}>Create an account</Link>
       </View>

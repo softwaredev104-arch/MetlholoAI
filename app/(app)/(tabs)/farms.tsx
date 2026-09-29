@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
@@ -10,12 +10,12 @@ import { createFarm, listFarms, type Farm } from '@/services/farms/farmRepositor
 import { Spacing } from '@/design/spacing';
 
 const actions = [
-  ['All animals', 'animals', 'paw-outline'],
-  ['All crops', 'crops', 'leaf-outline'],
-  ['Health records', 'healthRecords', 'medkit-outline'],
-  ['Farm tasks', 'tasks', 'checkmark-circle-outline'],
-  ['Feeding plans', 'feedingPlans', 'nutrition-outline'],
-  ['Marketplace', 'marketplace', 'storefront-outline'],
+  ['All animals', 'animals', 'paw-outline', 'Manage livestock records'],
+  ['All crops', 'crops', 'leaf-outline', 'Manage planted crops'],
+  ['Health records', 'healthRecords', 'medkit-outline', 'Track health events'],
+  ['Farm tasks', 'tasks', 'checkmark-circle-outline', 'Plan and complete work'],
+  ['Feeding plans', 'feedingPlans', 'nutrition-outline', 'Manage feeding schedules'],
+  ['Marketplace', 'marketplace', 'storefront-outline', 'Manage your storefront'],
 ] as const;
 
 export default function Farms() {
@@ -26,14 +26,20 @@ export default function Farms() {
   async function load() {
     if (!firebaseUser) return;
     setLoading(true);
-    try { setFarms(await listFarms(firebaseUser.uid)); } finally { setLoading(false); }
+    try {
+      setFarms(await listFarms(firebaseUser.uid));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, [firebaseUser?.uid]);
 
   async function addFarm() {
     if (!firebaseUser) return;
-    const farm = await createFarm(firebaseUser.uid, { name: `${firebaseUser.displayName ?? 'My'} Farm` });
+    const farm = await createFarm(firebaseUser.uid, {
+      name: `${firebaseUser.displayName ?? 'My'} Farm`,
+    });
     setFarms(current => [...current, farm]);
   }
 
@@ -42,19 +48,40 @@ export default function Farms() {
   return (
     <AppScreen>
       <AppText variant="largeTitle">Farm</AppText>
-      <AppText style={{ opacity: 0.7 }}>Manage your crops, animals, health, tasks, feeding and storefront from one owner-scoped workspace.</AppText>
+      <AppText style={styles.subtitle}>
+        Your owner-scoped farm workspace for crops, animals, health, tasks, feeding and selling.
+      </AppText>
 
       {!farm ? <AppButton title="Create your first farm" loading={loading} onPress={addFarm} /> : null}
 
       {farm ? (
         <>
-          <AppCard><AppText variant="headline">{farm.name}</AppText><AppText style={{ opacity: 0.7 }}>{farm.location ?? 'Location not set'}</AppText></AppCard>
+          <AppCard style={styles.farmHeader}>
+            <AppText variant="headline">{farm.name}</AppText>
+            <AppText style={styles.muted}>{farm.location ?? 'Location not set'}</AppText>
+            {farm.latitude != null && farm.longitude != null ? (
+              <AppText style={styles.muted}>GPS {farm.latitude.toFixed(4)}, {farm.longitude.toFixed(4)}</AppText>
+            ) : null}
+          </AppCard>
+
           <View style={styles.grid}>
-            {actions.map(([title, type]) => (
-              <AppCard key={type} style={styles.action} onTouchEnd={() => router.push({ pathname: '/farm/[farmId]/[type]', params: { farmId: farm.id, type } })}>
-                <AppText variant="headline">{title}</AppText>
-                <AppText style={{ opacity: 0.65 }}>Open</AppText>
-              </AppCard>
+            {actions.map(([title, type, , description]) => (
+              <Pressable
+                key={type}
+                accessibilityRole="button"
+                accessibilityLabel={title}
+                onPress={() => router.push({
+                  pathname: '/farm/[farmId]/[type]',
+                  params: { farmId: farm.id, type },
+                })}
+                style={({ pressed }) => [styles.actionPressable, { opacity: pressed ? 0.72 : 1 }]}
+              >
+                <AppCard style={styles.action}>
+                  <AppText variant="headline">{title}</AppText>
+                  <AppText style={styles.muted}>{description}</AppText>
+                  <AppText style={styles.open}>Open →</AppText>
+                </AppCard>
+              </Pressable>
             ))}
           </View>
         </>
@@ -63,4 +90,12 @@ export default function Farms() {
   );
 }
 
-const styles = StyleSheet.create({ grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md }, action: { width: '47%', minHeight: 120, justifyContent: 'center' } });
+const styles = StyleSheet.create({
+  subtitle: { opacity: 0.7, marginBottom: Spacing.lg },
+  farmHeader: { marginBottom: Spacing.lg },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
+  actionPressable: { width: '47%' },
+  action: { minHeight: 138, justifyContent: 'space-between' },
+  muted: { opacity: 0.65 },
+  open: { marginTop: Spacing.sm, fontWeight: '700' },
+});

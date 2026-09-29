@@ -78,9 +78,7 @@ export async function listFarmRecords(ownerId: string, farmId: string, type: Far
 
 export async function createFarmRecord(ownerId: string, farmId: string, type: FarmRecordType, input: Omit<FarmRecord, 'id' | 'ownerId' | 'farmId' | 'type' | 'createdAt'>) {
   const createdAt = new Date().toISOString();
-  const definedInput = Object.fromEntries(
-    Object.entries(input).filter(([, value]) => value !== undefined),
-  );
+  const definedInput = stripUndefined(input);
   const ref = await addDoc(collection(db(), 'farms', farmId, type), { ...definedInput, ownerId, farmId, type, createdAt });
   return { id: ref.id, ...definedInput, ownerId, farmId, type, createdAt } as FarmRecord;
 }

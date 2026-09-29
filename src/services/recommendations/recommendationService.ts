@@ -1,4 +1,4 @@
-import { listFarmRecords, type Farm, type FarmRecord } from '@/services/farms/farmRepository';
+import { listFarmRecords, type Farm } from '@/services/farms/farmRepository';
 import { listDiagnoses, type DiagnosisRecord } from '@/services/intelligence/diagnosisRepository';
 import { listPublishedGuidelines, listPublishedProducts } from '@/services/knowledge/knowledgeRepository';
 import type { AgriculturalProduct, CropGuideline } from '@/services/knowledge/models';

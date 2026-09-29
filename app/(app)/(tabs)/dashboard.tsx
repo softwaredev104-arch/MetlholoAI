@@ -20,18 +20,27 @@ export default function Dashboard() {
   const [farmName, setFarmName] = useState('Farm');
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<FarmRecommendation[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!firebaseUser) return;
     setLoading(true);
+    setError(null);
     try {
       const farms = await listFarms(firebaseUser.uid);
       const farm = farms[0];
-      if (!farm) return;
+      if (!farm) {
+        setRecords({ animals: [], crops: [], healthRecords: [], feedingPlans: [], tasks: [], marketplace: [] });
+        setRecommendations([]);
+        setFarmName('Farm');
+        return;
+      }
       setFarmName(farm.name);
       try { setRecommendations(await buildFarmRecommendations(firebaseUser.uid, farm)); } catch { setRecommendations([]); }
       const result = await Promise.all(TYPES.map(type => listFarmRecords(firebaseUser.uid, farm.id, type)));
       setRecords(Object.fromEntries(TYPES.map((type, index) => [type, result[index]])) as Record<FarmRecordType, FarmRecord[]>);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Could not load dashboard data. Please try again.');
     } finally { setLoading(false); }
   }, [firebaseUser?.uid]);
 
@@ -49,6 +58,7 @@ export default function Dashboard() {
   return (
     <AppScreen>
       <AppText variant="largeTitle">{farmName} Dashboard</AppText>
+      {error ? <AppCard style={styles.card}><AppText variant="headline">Dashboard unavailable</AppText><AppText style={styles.muted}>{error}</AppText></AppCard> : null}
       <AppText style={styles.subtitle}>Live analytics calculated from your Firestore farm records.</AppText>
 
       <View style={styles.grid}>

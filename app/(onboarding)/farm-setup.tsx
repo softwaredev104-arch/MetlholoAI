@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
+import { OptionPicker } from '@/components/ui/OptionPicker';
+import { LocationPicker } from '@/components/ui/LocationPicker';
 import { AppButton } from '@/components/ui/AppButton';
 import { useAuth } from '@/auth/AuthProvider';
 import { updateUserProfile, completeOnboarding } from '@/services/auth/userProfileService';
@@ -11,15 +13,8 @@ import { createFarm } from '@/services/farms/farmRepository';
 import { requestNotificationPermission } from '@/services/notifications/notifications';
 import { Spacing } from '@/design/spacing';
 import { useTheme } from '@/design/themes';
-
-const ANIMALS = ['Cattle','Goats','Sheep','Pigs','Chickens','Broilers','Layers','Poultry','Bees','Rabbits','Fish','Donkeys','Horses','Wildlife','Other'];
-const CROPS = ['Maize','Sorghum','Wheat','Beans','Cowpeas','Groundnuts','Tomatoes','Spinach','Cabbage','Pepper','Potatoes','Grapes','Watermelon','Melons','Onions','Carrots','Leafy vegetables','Fruit trees','Other'];
-const FARM_TYPES = ['Crop farming','Livestock','Mixed farming','Poultry','Horticulture','Aquaculture','Beekeeping','Agri-business','Research / advisory'];
-
-function Chips({ values, selected, onToggle }: { values: string[]; selected: string[]; onToggle: (value: string) => void }) {
-  const { colors } = useTheme();
-  return <View style={styles.chips}>{values.map(value => <Pressable key={value} onPress={() => onToggle(value)} style={[styles.chip,{borderColor: selected.includes(value) ? colors.primary : colors.border, backgroundColor: selected.includes(value) ? colors.primarySubtle : colors.surface}]}><AppText>{selected.includes(value) ? '✓ ' : ''}{value}</AppText></Pressable>)}</View>;
-}
+import { FARM_TYPES, ANIMALS, CROPS } from '@/data/agricultureDictionary';
+import { requestForegroundLocation, reverseGeocode } from '@/services/location/location';
 
 export default function FarmSetup() {
   const { colors } = useTheme();
@@ -28,6 +23,7 @@ export default function FarmSetup() {
   const [farmName, setFarmName] = useState('');
   const [farmType, setFarmType] = useState('Mixed farming');
   const [farmLocation, setFarmLocation] = useState(profile?.location?.label ?? '');
+  const [farmCoordinates, setFarmCoordinates] = useState(profile?.location);
   const [farmDescription, setFarmDescription] = useState('');
   const [farmSize, setFarmSize] = useState('');
   const [animals, setAnimals] = useState<string[]>([]);
@@ -47,8 +43,8 @@ export default function FarmSetup() {
       const farm = await createFarm(firebaseUser.uid, {
         name: farmName.trim(),
         location: farmLocation.trim() || profile?.location?.label,
-        latitude: profile?.location?.latitude,
-        longitude: profile?.location?.longitude,
+        latitude: farmCoordinates?.latitude,
+        longitude: farmCoordinates?.longitude,
         description: farmDescription.trim() || undefined,
         size: farmSize ? Number(farmSize) : undefined,
         sizeUnit: 'hectares',
@@ -120,10 +116,10 @@ export default function FarmSetup() {
       {step === 3 ? <>
         <AppText variant="largeTitle">What do you work with?</AppText>
         <AppText style={styles.subtitle}>Choose everything relevant. You can change these later.</AppText>
-        <AppText variant="headline">Animals & livestock</AppText>
-        <Chips values={ANIMALS} selected={animals} onToggle={v => toggle(animals,setAnimals,v)} />
-        <AppText variant="headline">Crops & plants</AppText>
-        <Chips values={CROPS} selected={crops} onToggle={v => toggle(crops,setCrops,v)} />
+        <OptionPicker label="Animals & livestock" options={ANIMALS} selected={ANIMALS.filter(o=>animals.includes(o.label)).map(o=>o.id)} multi
+          onChange={(ids)=>setAnimals(ANIMALS.filter(o=>(ids as string[]).includes(o.id)).map(o=>o.label))} />
+        <OptionPicker label="Crops & plants" options={CROPS} selected={CROPS.filter(o=>crops.includes(o.label)).map(o=>o.id)} multi
+          onChange={(ids)=>setCrops(CROPS.filter(o=>(ids as string[]).includes(o.id)).map(o=>o.label))} />
         <AppButton title="Continue" onPress={saveCategories} loading={loading} />
       </> : null}
 

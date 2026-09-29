@@ -1,4 +1,5 @@
-import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { PropsWithChildren } from 'react';
 import type { User } from 'firebase/auth';
 import { authService } from '@/services/auth/authService';
 import { getUserProfile } from '@/services/auth/userProfileService';

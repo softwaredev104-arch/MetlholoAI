@@ -38,7 +38,7 @@ async function loadModel() {
     "models",
     "crops",
     "maize",
-    "Leaf_blight",
+    "Leaf Blight",
     "metadata.json"
   );
 

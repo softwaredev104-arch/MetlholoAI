@@ -22,7 +22,7 @@ async function loadModel() {
     process.cwd(),
     "models",
     "crops",
-    "Apple",
+    "Apple ",
     "Black_rot",
     "model.json"
   );
@@ -37,7 +37,7 @@ async function loadModel() {
     process.cwd(),
     "models",
     "crops",
-    "Apple",
+    "Apple ",
     "Black_rot",
     "metadata.json"
   );

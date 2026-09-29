@@ -7,10 +7,6 @@ export type FarmRecordType = 'animals' | 'crops' | 'healthRecords' | 'tasks' | '
 export type Farm = { id: string; ownerId: string; name: string; location?: string; latitude?: number; longitude?: number; description?: string; size?: number; sizeUnit?: string; farmType?: string; createdAt: string; updatedAt?: string; };
 export type FarmRecord = { id: string; ownerId: string; farmId: string; type: FarmRecordType; name: string; notes?: string; status?: string; quantity?: number; unit?: string; createdAt: string; [key: string]: unknown; };
 
-export function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
-  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Partial<T>;
-}
-
 const db = () => getFirestoreDb();
 
 export async function listFarms(ownerId: string): Promise<Farm[]> {

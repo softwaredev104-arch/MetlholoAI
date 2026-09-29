@@ -15,5 +15,5 @@ jobs:
           node-version: 20
       - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run typecheck
-      - run: npm run lint
       - run: npm run test:ci
+      - run: npm run lint

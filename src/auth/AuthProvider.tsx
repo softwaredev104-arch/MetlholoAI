@@ -18,6 +18,7 @@ type AuthContextValue = {
   profile: UserProfile | null;
   status: AuthStatus;
   refreshProfile: () => Promise<void>;
+  refreshEmailVerification: () => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -37,6 +38,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
     else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
     else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
     else setStatus('AUTHENTICATED');
+  };
+
+  const refreshEmailVerification = async () => {
+    const user = await authService.reloadCurrentUser();
+    if (!user) {
+      setFirebaseUser(null);
+      setProfile(null);
+      setStatus('UNAUTHENTICATED');
+      return false;
+    }
+
+    setFirebaseUser(user);
+
+    if (!user.emailVerified) {
+      setStatus('EMAIL_VERIFICATION_REQUIRED');
+      return false;
+    }
+
+    const next = await getUserProfile(user.uid);
+    setProfile(next);
+
+    if (!next) setStatus('PROFILE_INCOMPLETE');
+    else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
+    else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
+    else setStatus('AUTHENTICATED');
+
+    return true;
   };
 
   useEffect(() => {
@@ -66,7 +94,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const value = useMemo(
-    () => ({ firebaseUser, profile, status, refreshProfile }),
+    () => ({ firebaseUser, profile, status, refreshProfile, refreshEmailVerification }),
     [firebaseUser, profile, status],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

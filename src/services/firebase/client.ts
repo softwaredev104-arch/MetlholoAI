@@ -1,5 +1,11 @@
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import {
+  getAuth,
+  getReactNativePersistence,
+  initializeAuth,
+  type Auth,
+} from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getFirebaseConfig, isFirebaseConfigured } from '@/config/env';
@@ -16,7 +22,19 @@ export function getFirebaseApp() {
 }
 
 export function getFirebaseAuth() {
-  if (!auth) auth = getAuth(getFirebaseApp());
+  if (!auth) {
+    const firebaseApp = getFirebaseApp();
+
+    try {
+      auth = initializeAuth(firebaseApp, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
+    } catch {
+      // Auth may already have been initialized by another Firebase import.
+      auth = getAuth(firebaseApp);
+    }
+  }
+
   return auth;
 }
 

@@ -3,7 +3,7 @@ import { getFirestoreDb } from '@/services/firebase/client';
 
 export type FarmRecordType = 'animals' | 'crops' | 'healthRecords' | 'tasks' | 'feedingPlans' | 'marketplace';
 
-export type Farm = { id: string; ownerId: string; name: string; location?: string; latitude?: number; longitude?: number; createdAt: string; };
+export type Farm = { id: string; ownerId: string; name: string; location?: string; latitude?: number; longitude?: number; description?: string; size?: number; sizeUnit?: string; farmType?: string; createdAt: string; };
 export type FarmRecord = { id: string; ownerId: string; farmId: string; type: FarmRecordType; name: string; notes?: string; status?: string; quantity?: number; unit?: string; createdAt: string; [key: string]: unknown; };
 
 const db = () => getFirestoreDb();
@@ -13,7 +13,7 @@ export async function listFarms(ownerId: string): Promise<Farm[]> {
   return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as Farm));
 }
 
-export async function createFarm(ownerId: string, input: Pick<Farm, 'name' | 'location' | 'latitude' | 'longitude'>) {
+export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id' | 'ownerId' | 'createdAt'> & Pick<Farm, 'name'>) {
   const createdAt = new Date().toISOString();
   const ref = await addDoc(collection(db(), 'farms'), { ...input, ownerId, createdAt });
   return { id: ref.id, ownerId, ...input, createdAt } as Farm;

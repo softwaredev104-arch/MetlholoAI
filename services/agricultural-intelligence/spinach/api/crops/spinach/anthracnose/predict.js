@@ -22,7 +22,7 @@ async function loadModel() {
     process.cwd(),
     "models",
     "crops",
-    "tomato",
+    "spinach",
     "Anthracnose",
     "model.json"
   );

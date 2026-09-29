@@ -18,7 +18,9 @@
       "expo-router",
       [
         "@react-native-google-signin/google-signin",
-        {}
+        {
+          "iosUrlScheme": "metlholoai"
+        }
       ],
       [
         "expo-image-picker",

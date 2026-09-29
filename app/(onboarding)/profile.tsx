@@ -72,10 +72,17 @@ export default function ProfileOnboarding() {
       if (image && image !== profile?.photoURL && !image.startsWith('http')) {
         photoURL = await uploadProfileImage(firebaseUser.uid, image);
       }
+      const savedLocation = location
+        ? {
+            ...location,
+            ...(locationLabel || location.label ? { label: locationLabel || location.label } : {}),
+          }
+        : undefined;
+
       await updateUserProfile(firebaseUser.uid, {
         displayName: name.trim(),
         photoURL,
-        location: location ? { ...location, label: locationLabel || location.label } : undefined,
+        location: savedLocation,
         onboardingStep: 1,
       });
       router.replace('/(onboarding)/farm-setup');

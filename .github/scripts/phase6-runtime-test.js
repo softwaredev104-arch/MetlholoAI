@@ -48,7 +48,7 @@ async function main() {
     }
 
     const confidence = Number(prediction.confidence);
-    const disease = String(prediction.disease ?? prediction.prediction ?? prediction.label ?? '').trim();
+    const disease = String(prediction.prediction ?? prediction.disease ?? prediction.label ?? '').trim();
     if (!disease) throw new Error(`/predict returned no prediction label: ${JSON.stringify(prediction)}`);
     if (!Number.isFinite(confidence) || confidence < 0 || confidence > 100) {
       throw new Error(`/predict returned invalid confidence: ${JSON.stringify(prediction)}`);

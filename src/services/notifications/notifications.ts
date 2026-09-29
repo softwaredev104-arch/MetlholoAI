@@ -25,6 +25,10 @@ export async function getNotificationPermissionStatus() {
   return Notifications.getPermissionsAsync();
 }
 
+export function isNotificationPermissionGranted(settings: Notifications.NotificationPermissionsStatus) {
+  return settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+}
+
 export async function requestNotificationPermission() {
   await configureNotificationChannel();
   return Notifications.requestPermissionsAsync({

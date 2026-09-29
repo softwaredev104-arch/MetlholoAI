@@ -38,7 +38,7 @@ async function loadModel() {
     "models",
     "livestock",
     "cattle",
-    "foot_and_mouth_disease",
+    "lumpy-skin-disease",
     "metadata.json"
   );
 

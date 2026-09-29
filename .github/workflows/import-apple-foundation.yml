@@ -1,6 +1,12 @@
 name: Import Apple Intelligence Foundation
 
 on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'MetlholoAI branch to receive the imported foundation'
+        required: true
+        default: 'audit/model-integration-phase6'
   pull_request_target:
     types: [opened, synchronize, reopened]
     branches:

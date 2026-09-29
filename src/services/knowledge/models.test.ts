@@ -39,6 +39,8 @@ describe('agricultural knowledge contracts', () => {
       source,
       publicationStatus: 'published',
     });
-    expect(guideline.recommendations[0].productName).toBe('Reference Product');
+    const firstRecommendation = guideline.recommendations[0];
+    if (!firstRecommendation) throw new Error('Expected at least one recommendation.');
+    expect(firstRecommendation.productName).toBe('Reference Product');
   });
 });

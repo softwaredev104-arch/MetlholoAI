@@ -1,6 +1,5 @@
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getFirebaseConfig, isFirebaseConfigured } from '@/config/env';
@@ -21,9 +20,6 @@ export function getFirebaseAuth() {
     // Firebase JS SDK 12.x automatically uses its React Native persistence
     // adapter when AsyncStorage is installed. The explicit
     // getReactNativePersistence helper is no longer exported by this SDK.
-    // Keep the import referenced so bundlers retain the native storage
-    // dependency in the React Native build.
-    void AsyncStorage;
     auth = getAuth(getFirebaseApp());
   }
 

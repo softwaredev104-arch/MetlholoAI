@@ -53,7 +53,7 @@ jobs:
             predict: api/crops/spinach/anthracnose/predict.js
             report: api/crops/spinach/anthracnose/generate-report.js
             image: https://commons.wikimedia.org/wiki/Special:Redirect/file/Spinach-%20Cercospora%20leaf%20spot.jpg
-          - service: cattle
+          - service: general
             subject: Cattle
             predict: api/livestock/cattle/lumpy-skin-disease/predict.js
             report: api/livestock/cattle/lumpy-skin-disease/generate-report.js

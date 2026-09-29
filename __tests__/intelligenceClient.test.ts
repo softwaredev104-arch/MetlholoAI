@@ -10,6 +10,7 @@ const cattle = {
   reportPath: '/api/livestock/cattle/generate-report',
   input: 'image' as const,
   trainingImageHints: [],
+  availability: 'coming_soon' as const,
 };
 
 describe('prediction response contract', () => {
@@ -31,3 +32,5 @@ describe('prediction response contract', () => {
     expect(normalizePredictionLabel({ prediction: 'foot-and-mouth', confidence: 0.95 }, cattle)).toBe('Foot and Mouth Disease');
   });
 });
+
+// Phase 6 import trigger

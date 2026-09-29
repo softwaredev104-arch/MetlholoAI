@@ -1,0 +1,67 @@
+name: Audit Imported Agricultural Foundations
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'MetlholoAI branch to audit'
+        required: true
+        default: 'audit/model-integration-phase6'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout MetlholoAI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
+
+      - name: Build implementation audit manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="services/agricultural-intelligence"
+          manifest="$root/FOUNDATION_AUDIT.json"
+          python - <<'PY'
+          import json, os
+          root="services/agricultural-intelligence"
+          rows=[]
+          for name in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+              base=os.path.join(root,name)
+              if not os.path.isdir(base): continue
+              files=[]
+              for dp, dns, fns in os.walk(base):
+                  dns[:] = [d for d in dns if d not in {'.git','node_modules','.next','dist','build','coverage'}]
+                  for fn in fns:
+                      files.append(os.path.relpath(os.path.join(dp,fn),base))
+              def has(suffix):
+                  return any(f.lower().endswith(suffix) for f in files)
+              rows.append({
+                  "service": name,
+                  "fileCount": len(files),
+                  "hasPackageJson": "package.json" in files,
+                  "hasModelJson": has("/model.json") or any(f.lower()=="model.json" for f in files),
+                  "hasMetadata": has("metadata.json"),
+                  "predictionFiles": [f for f in files if os.path.basename(f).lower() in {"predict.js","predict.ts","prediction.js","prediction.ts"}],
+                  "reportFiles": [f for f in files if "report" in os.path.basename(f).lower()],
+                  "geminiFiles": [f for f in files if "gemini" in f.lower()],
+                  "modelFiles": [f for f in files if f.lower().endswith((".bin",".h5",".keras",".onnx",".pt",".pth",".tflite"))],
+                  "provenanceFile": os.path.exists(os.path.join(base,"FOUNDATION_PROVENANCE.json"))
+              })
+          os.makedirs(root,exist_ok=True)
+          with open(manifest,"w") as f: json.dump({"status":"AUDITED_IMPORTED_FOUNDATIONS","services":rows},f,indent=2)
+          PY
+
+      - name: Commit audit manifest
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/agricultural-intelligence/FOUNDATION_AUDIT.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: record agricultural foundation audit"
+          git push origin "HEAD:${{ inputs.target_branch }}"

@@ -1,0 +1,8 @@
+{
+  "sourceRepository": "loetolex/Botswana-Agricultural-Intelligence-Platform-Grape",
+  "sourceRef": "main",
+  "importedInto": "softwaredev104-arch/MetlholoAI",
+  "targetPath": "services/agricultural-intelligence/grape",
+  "status": "IMPORTED_FOR_AUDIT",
+  "sourceRepositoryMutation": false
+}

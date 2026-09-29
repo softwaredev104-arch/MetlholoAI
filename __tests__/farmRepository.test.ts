@@ -1,4 +1,4 @@
-import { stripUndefined } from '@/services/farms/farmRepository';
+import { stripUndefined } from '@/utils/firestore';
 
 describe('farm Firestore write sanitization', () => {
   it('removes undefined optional fields without changing valid values', () => {

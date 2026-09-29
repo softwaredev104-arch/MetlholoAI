@@ -49,7 +49,7 @@ export default function FarmRecordDetail() {
     if (!farmId || !record || !type) return;
     Alert.alert('Delete record?', `Delete “${record.name}”? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteFarmRecord(farmId, type, record.id); router.back(); } },
+      { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteFarmRecord(farmId, type, record.id); router.back(); } catch (error) { Alert.alert('Could not delete', error instanceof Error ? error.message : 'Please remove linked history first, then try again.'); } } },
     ]);
   }
 

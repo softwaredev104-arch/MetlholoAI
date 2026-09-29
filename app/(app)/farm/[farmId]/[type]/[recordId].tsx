@@ -54,7 +54,6 @@ export default function FarmRecordDetail() {
     {record.notes ? <AppCard style={styles.card}><AppText variant="headline">Notes</AppText><AppText>{record.notes}</AppText></AppCard> : null}
     {related ? <AppCard style={styles.card}><AppText variant="headline">Related farm asset</AppText><AppText>{related.name}</AppText><AppText style={styles.muted}>{related.category ? String(related.category) : ''}</AppText><AppButton title="Open related asset" variant="secondary" onPress={() => router.push({ pathname: '/farm/[farmId]/[type]/[recordId]', params: { farmId, type: related.type, recordId: related.id } })} /></AppCard> : null}
     {canDiagnose ? <AppButton title="Run AI diagnosis" onPress={() => router.push({ pathname: '/scan', params: { recordType: type, recordId: record.id } })} /> : null}
-    <AppButton title="Edit record" variant="secondary" onPress={() => router.back()} />
     <AppButton title="Delete record" variant="secondary" onPress={remove} />
     <AppButton title="Back to records" variant="secondary" onPress={() => router.back()} />
   </AppScreen>;

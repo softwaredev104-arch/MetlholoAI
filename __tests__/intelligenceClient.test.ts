@@ -10,6 +10,7 @@ const cattle = {
   reportPath: '/api/livestock/cattle/generate-report',
   input: 'image' as const,
   trainingImageHints: [],
+  availability: 'coming_soon' as const,
 };
 
 describe('prediction response contract', () => {

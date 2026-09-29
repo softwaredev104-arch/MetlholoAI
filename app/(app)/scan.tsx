@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, View } from 'react-native';
+import { Alert, Image, Linking, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { requestCameraPermission, requestPhotoLibraryPermission } from '@/services/permissions/mobilePermissions';
@@ -44,6 +44,10 @@ export default function Scan() {
         source === 'camera'
           ? 'Allow MetlholoAI to use your camera in Settings so you can capture a diagnosis image.'
           : 'Allow MetlholoAI to access your photos in Settings so you can choose a diagnosis image.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ],
       );
       return;
     }

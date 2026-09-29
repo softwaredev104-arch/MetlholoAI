@@ -1,0 +1,1 @@
+import {Platform,ViewStyle} from 'react-native'; export const Shadows={card:{shadowColor:'#000',shadowOpacity:Platform.OS==='ios'?0.06:0,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:Platform.OS==='android'?2:0} satisfies ViewStyle};

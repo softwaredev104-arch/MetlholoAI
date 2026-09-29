@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';

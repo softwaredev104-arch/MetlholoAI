@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for service in apple tomato spinach poultry; do
+          for service in general maize grape apple potatoes pepper tomato spinach poultry; do
             cd "services/agricultural-intelligence/$service"
             npm install --package-lock-only --ignore-scripts --no-audit --no-fund
             cd - >/dev/null

@@ -7,7 +7,6 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
   useEffect(() => {
     if (status === 'UNAUTHENTICATED') router.replace('/(auth)/welcome');
-    if (status === 'EMAIL_VERIFICATION_REQUIRED') router.replace('/(auth)/verify-email');
     if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
     if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
   }, [status]);

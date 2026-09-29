@@ -183,7 +183,7 @@ export default function FarmRecords() {
             {validType === 'feedingPlans' ? <OptionPicker label="Feed type" options={FEED_TYPES} selected={FEED_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=FEED_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'tasks' ? <OptionPicker label="Task type" options={TASK_TYPES} selected={TASK_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=TASK_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'marketplace' ? <OptionPicker label="Marketplace category" options={MARKETPLACE_CATEGORIES} selected={MARKETPLACE_CATEGORIES.find(o=>o.label===category)?.id??''} onChange={(id)=>setCategory(MARKETPLACE_CATEGORIES.find(o=>o.id===id)?.label??'')} /> : null}
-            {validType === 'healthRecords' && category.toLowerCase().includes('vaccine') ? <OptionPicker label="Vaccine" options={VACCINES} selected={VACCINES.find(o=>o.label===name)?.id??''} onChange={(id)=>setName(VACCINES.find(o=>o.id===id)?.label??'')} /> : null}
+            {validType === 'marketplace' && category === 'Vaccines' ? <OptionPicker label="Vaccine" options={VACCINES} selected={VACCINES.find(o=>o.label===name)?.id??''} onChange={(id)=>setName(VACCINES.find(o=>o.id===id)?.label??'')} /> : null}
             {validType === 'marketplace' && category === 'Fertilizers' ? <OptionPicker label="Fertilizer" options={FERTILIZERS} selected={FERTILIZERS.find(o=>o.label===name)?.id??''} onChange={(id)=>setName(FERTILIZERS.find(o=>o.id===id)?.label??'')} /> : null}
             <TextInput
               value={name}

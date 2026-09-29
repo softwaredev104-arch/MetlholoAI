@@ -73,3 +73,36 @@ Launch → Authentication → Sign In / Create Account → Firebase Authenticati
 - Firebase authentication against a real project: NOT VERIFIED
 - iOS simulator/device build: NOT VERIFIED
 - Google/Apple sign-in: NOT IMPLEMENTED YET — provider adapters belong in the authentication phase after the email flow is verified
+
+## Current implementation phase
+
+### Phase 1 — Agricultural intelligence experience
+- Five-tab mobile workspace: Home, Farm, Scan, Dashboard, Profile.
+- Central circular Scan action.
+- Crops/Livestock intelligence explorer with reusable cards and model tray.
+- Model-specific capture guidance with acceptable/unacceptable guidance and training-image placeholders.
+- Multipart image upload to the existing split-service `predict` contracts.
+- Report generation adapter for the existing report endpoints.
+- Service base URLs are environment-configured; deployed Vercel URLs are not guessed.
+
+### Phase 2 — Farm data foundation
+- Owner-scoped farms in Firestore.
+- CRUD foundation for animals, crops, health records, farm tasks, feeding plans and marketplace records.
+- Firestore ownership rules for farms and nested farm records.
+
+### Phase 3 — Home + live farm context
+- Farm-location coordinates, weather, alerts and shortcut personalization.
+- Open-Meteo is the planned weather provider; its forecast API accepts latitude/longitude and exposes current/hourly weather variables. citeturn2search1
+
+### Phase 4 — Diagnosis persistence and exports
+- Save prediction/report records to the user's farm.
+- ≥95% confidence alert escalation.
+- Farm-owner naming from the selected farm.
+- PDF and PowerPoint export feedback/dialog flow.
+
+### Phase 5 — Analytics + marketplace
+- Dynamic crop/livestock analytics for health, feeding, yield and tasks.
+- Storefront CRUD sourced from farm animals/crops plus standalone marketplace listings.
+
+### Phase 6 — Hardening
+- Native Firebase files, dependency lock refresh, local Android/iOS builds, endpoint integration tests, authorization adversarial tests and mobile parity verification.

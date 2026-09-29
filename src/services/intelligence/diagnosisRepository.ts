@@ -1,5 +1,6 @@
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { getFirestoreDb } from '@/services/firebase/client';
+import { stripUndefined } from '@/utils/firestore';
 
 export type DiagnosisRecord = {
   id: string;
@@ -24,7 +25,7 @@ export async function createDiagnosis(input: CreateDiagnosisInput): Promise<Diag
   const createdAt = new Date().toISOString();
   const ref = await addDoc(
     collection(getFirestoreDb(), 'farms', input.farmId, 'diagnostics'),
-    { ...input, createdAt },
+    { ...stripUndefined(input), createdAt },
   );
 
   return { ...input, id: ref.id, createdAt };

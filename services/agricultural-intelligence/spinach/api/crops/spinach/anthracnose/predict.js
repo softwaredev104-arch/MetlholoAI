@@ -119,7 +119,7 @@ module.exports = async function handler(req, res) {
 
         return res.status(200).json({
           success: true,
-          crop: "Tomato",
+          crop: "Spinach",
           disease: "Anthracnose",
           scientificName: "Colletotrichum spp.",
           prediction: labels[bestIndex],

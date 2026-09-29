@@ -24,8 +24,8 @@ async function loadModel() {
     process.cwd(),
     "models",
     "crops",
-    "potato",
-    "Late_blight",
+    "Potatoes ",
+    "Late blight",
     "model.json"
   );
 

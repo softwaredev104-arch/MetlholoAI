@@ -1,4 +1,4 @@
-import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { authService } from '@/services/auth/authService';
 import { getUserProfile } from '@/services/auth/userProfileService';
@@ -29,10 +29,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>(
     isFirebaseConfigured ? 'AUTHENTICATING' : 'UNAUTHENTICATED',
   );
+  const authEventRef = useRef(0);
 
   const refreshProfile = async () => {
     if (!firebaseUser) return;
+    const eventId = ++authEventRef.current;
     const next = await getUserProfile(firebaseUser.uid);
+    if (eventId !== authEventRef.current) return;
     setProfile(next);
     if (!next) setStatus('PROFILE_INCOMPLETE');
     else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
@@ -41,14 +44,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const refreshEmailVerification = async () => {
+    const eventId = ++authEventRef.current;
     const user = await authService.reloadCurrentUser();
     if (!user) {
+      if (eventId !== authEventRef.current) return false;
       setFirebaseUser(null);
       setProfile(null);
       setStatus('UNAUTHENTICATED');
       return false;
     }
 
+    if (eventId !== authEventRef.current) return false;
     setFirebaseUser(user);
 
     if (!user.emailVerified) {
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const next = await getUserProfile(user.uid);
+    if (eventId !== authEventRef.current) return false;
     setProfile(next);
 
     if (!next) setStatus('PROFILE_INCOMPLETE');
@@ -70,6 +77,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     return authService.subscribe(async (user) => {
+      const eventId = ++authEventRef.current;
       setFirebaseUser(user);
       setProfile(null);
       if (!user) {
@@ -82,13 +90,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       try {
         const next = await getUserProfile(user.uid);
+        if (eventId !== authEventRef.current) return;
         setProfile(next);
         if (!next) setStatus('PROFILE_INCOMPLETE');
         else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
         else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
         else setStatus('AUTHENTICATED');
       } catch {
-        setStatus('PROFILE_INCOMPLETE');
+        if (eventId === authEventRef.current) setStatus('PROFILE_INCOMPLETE');
       }
     });
   }, []);

@@ -14,7 +14,7 @@ export function RecommendationCard({ recommendation }: { recommendation: FarmRec
       router.push({ pathname: '/scan', params: { recordType: recommendation.assetType, recordId: recommendation.assetId } });
       return;
     }
-    router.push('/farm');
+    router.push('/(app)/(tabs)/farms');
   }
   return <AppCard style={styles.card}>
     <View style={styles.header}><AppText variant="caption">{priorityLabel[recommendation.priority]}</AppText>{recommendation.confidence !== undefined ? <AppText variant="caption">{recommendation.confidence.toFixed(1)}% model confidence</AppText> : null}</View>

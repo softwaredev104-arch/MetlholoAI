@@ -106,3 +106,29 @@ Launch → Authentication → Sign In / Create Account → Firebase Authenticati
 
 ### Phase 6 — Hardening
 - Native Firebase files, dependency lock refresh, local Android/iOS builds, endpoint integration tests, authorization adversarial tests and mobile parity verification.
+
+## Agricultural Knowledge Layer
+
+The agricultural knowledge layer separates validated reference knowledge from farmer-owned marketplace data.
+
+### Reference collections
+- `agriculturalCatalog` — normalized fertilizers, agrochemicals, feed, veterinary products, vaccines and seeds.
+- `cropGuidelines` — structured crop/problem recommendations with provenance.
+- `marketPrices` — BAMB producer/contract price references.
+- Published reference records are readable; ingestion/admin writes require the Firebase `admin` claim.
+
+### Farmer-owned marketplace
+- `marketplaceListings` is separate from the reference catalog.
+- A listing may optionally point to a `catalogProductId`.
+- Ownership is enforced by Firebase rules; published listings can be discovered while owners retain mutation rights.
+
+### Diagnosis knowledge bridge
+`resolveDiagnosisReference()` maps an AI prediction to published guidelines and relevant catalog inputs. It does not prescribe treatment or create autonomous veterinary decisions.
+
+### Notebook ingestion contract
+The uploaded BAMB ingestion notebook is treated as an ingestion/research pipeline. Its raw extraction remains outside the mobile UI; normalized records should move through:
+
+`RAW → EXTRACTED → NORMALIZED → VALIDATED → PUBLISHED`
+
+Every published knowledge record carries source/provenance metadata and extraction confidence.
+

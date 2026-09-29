@@ -5,6 +5,8 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { OptionPicker } from '@/components/ui/OptionPicker';
+import { ANIMALS, CROPS, INTELLIGENCE_DISEASES_AND_PESTS, VACCINES, FERTILIZERS, FEED_TYPES, UNITS, TASK_TYPES, MARKETPLACE_CATEGORIES } from '@/data/agricultureDictionary';
 import { useAuth } from '@/auth/AuthProvider';
 import {
   createFarmRecord,
@@ -48,6 +50,7 @@ export default function FarmRecords() {
   const [status, setStatus] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('');
+  const [category, setCategory] = useState('');
 
   const validType = useMemo(() => type && type in labels ? type : null, [type]);
 
@@ -65,6 +68,7 @@ export default function FarmRecords() {
     setStatus('');
     setQuantity('');
     setUnit('');
+    setCategory('');
     setModalOpen(true);
   }
 
@@ -75,6 +79,7 @@ export default function FarmRecords() {
     setStatus(record.status ?? '');
     setQuantity(record.quantity == null ? '' : String(record.quantity));
     setUnit(record.unit ?? '');
+    setCategory(String(record.category ?? ''));
     setModalOpen(true);
   }
 
@@ -88,6 +93,7 @@ export default function FarmRecords() {
         status: status.trim(),
         quantity: quantity.trim() ? Number(quantity) : undefined,
         unit: unit.trim() || undefined,
+        category: category || undefined,
       };
       if (editing) {
         await updateFarmRecord(farmId, validType, editing.id, input);
@@ -171,10 +177,18 @@ export default function FarmRecords() {
         <View style={styles.modalBackdrop}>
           <View style={[styles.modal, { backgroundColor: colors.surface }]}>
             <AppText variant="title2">{editing ? `Edit ${singular[validType]}` : `Add ${singular[validType]}`}</AppText>
+            {validType === 'animals' ? <OptionPicker label="Animal category" options={ANIMALS} selected={ANIMALS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=ANIMALS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
+            {validType === 'crops' ? <OptionPicker label="Crop" options={CROPS} selected={CROPS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=CROPS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
+            {validType === 'healthRecords' ? <OptionPicker label="Condition / disease / pest" options={INTELLIGENCE_DISEASES_AND_PESTS} selected={INTELLIGENCE_DISEASES_AND_PESTS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=INTELLIGENCE_DISEASES_AND_PESTS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
+            {validType === 'feedingPlans' ? <OptionPicker label="Feed type" options={FEED_TYPES} selected={FEED_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=FEED_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
+            {validType === 'tasks' ? <OptionPicker label="Task type" options={TASK_TYPES} selected={TASK_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=TASK_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
+            {validType === 'marketplace' ? <OptionPicker label="Marketplace category" options={MARKETPLACE_CATEGORIES} selected={MARKETPLACE_CATEGORIES.find(o=>o.label===category)?.id??''} onChange={(id)=>setCategory(MARKETPLACE_CATEGORIES.find(o=>o.id===id)?.label??'')} /> : null}
+            {validType === 'healthRecords' && category.toLowerCase().includes('vaccine') ? <OptionPicker label="Vaccine" options={VACCINES} selected={VACCINES.find(o=>o.label===name)?.id??''} onChange={(id)=>setName(VACCINES.find(o=>o.id===id)?.label??'')} /> : null}
+            {validType === 'marketplace' && category === 'Fertilizers' ? <OptionPicker label="Fertilizer" options={FERTILIZERS} selected={FERTILIZERS.find(o=>o.label===name)?.id??''} onChange={(id)=>setName(FERTILIZERS.find(o=>o.id===id)?.label??'')} /> : null}
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder={validType === 'marketplace' ? 'Listing name' : `${singular[validType]} name`}
+              placeholder={validType === 'marketplace' ? 'Name / identifier (optional when a category is selected)' : `${singular[validType]} name or identifier`}
               placeholderTextColor={colors.textTertiary}
               style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
             />
@@ -193,13 +207,7 @@ export default function FarmRecords() {
               placeholderTextColor={colors.textTertiary}
               style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
             />
-            <TextInput
-              value={unit}
-              onChangeText={setUnit}
-              placeholder="Unit (kg, head, bags, etc.)"
-              placeholderTextColor={colors.textTertiary}
-              style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
-            />
+            <OptionPicker label="Unit" options={UNITS} selected={UNITS.find(o=>o.label===unit)?.id??''} onChange={(id)=>setUnit(String(id))} />
             <TextInput
               value={notes}
               onChangeText={setNotes}

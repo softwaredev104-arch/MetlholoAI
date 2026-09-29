@@ -20,10 +20,12 @@ export default function FarmRecordDetail() {
   const [linkedRecords, setLinkedRecords] = useState<FarmRecord[]>([]);
   const [diagnoses, setDiagnoses] = useState<DiagnosisRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     if (!firebaseUser || !farmId || !recordId || !type) return;
     setLoading(true);
+    setError(null);
     try {
       const items = await listFarmRecords(firebaseUser.uid, farmId, type);
       const found = items.find(item => item.id === recordId) ?? null;
@@ -41,6 +43,12 @@ export default function FarmRecordDetail() {
         setLinkedRecords([]);
         setDiagnoses([]);
       }
+    } catch (loadError) {
+      setRecord(null);
+      setRelated(null);
+      setLinkedRecords([]);
+      setDiagnoses([]);
+      setError(loadError instanceof Error ? loadError.message : 'Could not load this record. Please try again.');
     } finally { setLoading(false); }
   }
   useEffect(() => { load(); }, [firebaseUser?.uid, farmId, recordId, type]);
@@ -53,7 +61,7 @@ export default function FarmRecordDetail() {
     ]);
   }
 
-  if (!record && !loading) return <AppScreen><AppText variant="largeTitle">Record not found</AppText><AppButton title="Back" variant="secondary" onPress={() => router.back()} /></AppScreen>;
+  if (!record && !loading) return <AppScreen><AppText variant="largeTitle">{error ? 'Record unavailable' : 'Record not found'}</AppText><AppText style={styles.muted}>{error ?? 'This record could not be found.'}</AppText><AppButton title="Retry" variant="secondary" loading={loading} onPress={load} /><AppButton title="Back" variant="secondary" onPress={() => router.back()} /></AppScreen>;
   if (!record) return <AppScreen><AppText variant="largeTitle">Loading…</AppText></AppScreen>;
 
   const canDiagnose = type === 'animals' || type === 'crops';

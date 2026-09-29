@@ -8,12 +8,16 @@ import { AppCard } from '@/components/ui/AppCard';
 import { INTELLIGENCE_MODELS, type IntelligenceModel } from '@/services/intelligence/catalog';
 import { predict, generateReport, type PredictionResult } from '@/services/intelligence/client';
 import { Spacing } from '@/design/spacing';
+import { resolveDiagnosisReference } from '@/services/knowledge/diagnosisReference';
+import type { DiagnosisReference } from '@/services/knowledge/models';
+import { AgriculturalInputCard, GuidelineCard } from '@/components/knowledge';
 
 export default function Scan() {
   const [model, setModel] = useState<IntelligenceModel>(INTELLIGENCE_MODELS[0]);
   const [uri, setUri] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [report, setReport] = useState<any>(null);
+  const [reference, setReference] = useState<DiagnosisReference | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function choose(source: 'camera' | 'library') {
@@ -25,6 +29,7 @@ export default function Scan() {
       setUri(result.assets[0].uri);
       setPrediction(null);
       setReport(null);
+      setReference(null);
     }
   }
 
@@ -34,6 +39,18 @@ export default function Scan() {
     try {
       const result = await predict(model, uri);
       setPrediction(result);
+      try {
+        const rawConfidence = Number(result.confidence ?? 0);
+        const confidence = rawConfidence > 1 ? rawConfidence / 100 : rawConfidence;
+        setReference(await resolveDiagnosisReference({
+          prediction: String(result.disease ?? result.prediction ?? 'Unknown'),
+          confidence,
+          crop: model.category === 'crops' ? model.subject : undefined,
+          livestock: model.category === 'livestock' ? model.subject : undefined,
+        }));
+      } catch {
+        setReference(null);
+      }
     } catch (error) {
       Alert.alert('Prediction failed', error instanceof Error ? error.message : 'The intelligence service could not be reached.');
     } finally {
@@ -86,6 +103,26 @@ export default function Scan() {
           <AppText>Confidence: {Number(prediction.confidence ?? 0).toFixed(2)}%</AppText>
           <AppButton title="Generate report" loading={loading} onPress={createReport} />
         </AppCard>
+      ) : null}
+
+      {reference ? (
+        <>
+          {reference.guidelines.length > 0 ? (
+            <View>
+              <AppText variant="headline">Knowledge references</AppText>
+              {reference.guidelines.map(item => <GuidelineCard key={item.id} guideline={item} />)}
+            </View>
+          ) : null}
+          {reference.inputs.length > 0 ? (
+            <View>
+              <AppText variant="headline">Relevant inputs</AppText>
+              {reference.inputs.map(item => <AgriculturalInputCard key={item.id} product={item} />)}
+            </View>
+          ) : null}
+          {reference.guidelines.length === 0 && reference.inputs.length === 0 ? (
+            <AppCard><AppText style={styles.muted}>No published reference knowledge matched this prediction.</AppText></AppCard>
+          ) : null}
+        </>
       ) : null}
 
       {report ? (

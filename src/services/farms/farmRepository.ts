@@ -10,7 +10,7 @@ const db = () => getFirestoreDb();
 
 export async function listFarms(ownerId: string): Promise<Farm[]> {
   const snapshot = await getDocs(query(collection(db(), 'farms'), where('ownerId', '==', ownerId)));
-  return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as Farm));
+  return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
 }
 
 export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id' | 'ownerId' | 'createdAt'> & Pick<Farm, 'name'>) {

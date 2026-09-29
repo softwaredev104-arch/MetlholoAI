@@ -7,6 +7,8 @@ import { AppCard } from '@/components/ui/AppCard';
 import { useAuth } from '@/auth/AuthProvider';
 import { listFarms, listFarmRecords, type FarmRecord, type FarmRecordType } from '@/services/farms/farmRepository';
 import { Spacing } from '@/design/spacing';
+import { buildFarmRecommendations, type FarmRecommendation } from '@/services/recommendations/recommendationService';
+import { RecommendationCard } from '@/components/recommendations/RecommendationCard';
 
 const TYPES: FarmRecordType[] = ['animals','crops','healthRecords','feedingPlans','tasks','marketplace'];
 
@@ -17,6 +19,7 @@ export default function Dashboard() {
   });
   const [farmName, setFarmName] = useState('Farm');
   const [loading, setLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState<FarmRecommendation[]>([]);
 
   const load = useCallback(async () => {
     if (!firebaseUser) return;
@@ -26,6 +29,7 @@ export default function Dashboard() {
       const farm = farms[0];
       if (!farm) return;
       setFarmName(farm.name);
+      try { setRecommendations(await buildFarmRecommendations(firebaseUser.uid, farm)); } catch { setRecommendations([]); }
       const result = await Promise.all(TYPES.map(type => listFarmRecords(firebaseUser.uid, farm.id, type)));
       setRecords(Object.fromEntries(TYPES.map((type, index) => [type, result[index]])) as Record<FarmRecordType, FarmRecord[]>);
     } finally { setLoading(false); }
@@ -68,6 +72,10 @@ export default function Dashboard() {
         <AppText style={styles.muted}>Future diagnosis results and confidence trends will appear here without replacing these real records.</AppText>
       </AppCard>
 
+      <AppText variant="headline" style={styles.recommendationsTitle}>AI recommendations</AppText>
+      <AppText style={styles.muted}>Recommendations are grounded in your farm records, saved diagnoses, and published agricultural knowledge.</AppText>
+      {recommendations.length ? recommendations.slice(0, 5).map(item => <RecommendationCard key={item.id} recommendation={item} />) : <AppCard style={styles.card}><AppText>No recommendations yet.</AppText><AppText style={styles.muted}>Run a diagnosis or add more farm records to build recommendation context.</AppText></AppCard>}
+
       <AppText variant="caption">{loading ? 'Refreshing…' : 'Updated from your farm data'}</AppText>
     </AppScreen>
   );
@@ -83,4 +91,5 @@ const styles = StyleSheet.create({
   metric:{width:'47%',minHeight:110,justifyContent:'space-between'},
   card:{marginTop:Spacing.md},
   muted:{opacity:.65},
+  recommendationsTitle:{marginTop:Spacing.xl},
 });

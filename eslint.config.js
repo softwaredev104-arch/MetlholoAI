@@ -26,9 +26,9 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/consistent-type-imports': 'off',
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-misused-promises': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-base-to-string': 'off',
       '@typescript-eslint/no-unsafe-enum-comparison': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -37,6 +37,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 );

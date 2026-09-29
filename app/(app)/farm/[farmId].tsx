@@ -18,6 +18,7 @@ export default function FarmDetail() {
   const { firebaseUser } = useAuth();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
@@ -31,6 +32,7 @@ export default function FarmDetail() {
   async function load() {
     if (!firebaseUser || !farmId) return;
     setLoading(true);
+    setError(null);
     try {
       const found = (await listFarms(firebaseUser.uid)).find(item => item.id === farmId) ?? null;
       setFarm(found);
@@ -44,8 +46,9 @@ export default function FarmDetail() {
         setFarmType(found.farmType ?? '');
         setDescription(found.description ?? '');
       }
-    } catch {
+    } catch (loadError) {
       setFarm(null);
+      setError(loadError instanceof Error ? loadError.message : 'Could not load this farm. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -55,6 +58,11 @@ export default function FarmDetail() {
 
   async function save() {
     if (!firebaseUser || !farmId || !name.trim()) return;
+    const parsedSize = size.trim() ? Number(size) : undefined;
+    if (parsedSize !== undefined && !Number.isFinite(parsedSize)) {
+      Alert.alert('Invalid farm size', 'Enter a valid numeric farm size or leave the field empty.');
+      return;
+    }
     setSaving(true);
     try {
       await updateFarm(firebaseUser.uid, farmId, {
@@ -62,7 +70,7 @@ export default function FarmDetail() {
         location: location.trim() || undefined,
         latitude,
         longitude,
-        size: size.trim() ? Number(size) : undefined,
+        size: parsedSize,
         sizeUnit: sizeUnit.trim() || undefined,
         farmType: farmType || undefined,
         description: description.trim() || undefined,
@@ -100,7 +108,7 @@ export default function FarmDetail() {
   }
 
   if (loading) return <AppScreen><AppText variant="largeTitle">Loading farm…</AppText></AppScreen>;
-  if (!farm) return <AppScreen><AppText variant="largeTitle">Farm not found</AppText><AppButton title="Back" variant="secondary" onPress={() => router.back()} /></AppScreen>;
+  if (!farm) return <AppScreen><AppText variant="largeTitle">{error ? 'Farm unavailable' : 'Farm not found'}</AppText><AppText style={styles.subtitle}>{error ?? 'This farm could not be found.'}</AppText><AppButton title="Retry" variant="secondary" loading={loading} onPress={load} /><AppButton title="Back" variant="secondary" onPress={() => router.back()} /></AppScreen>;
 
   return (
     <AppScreen>

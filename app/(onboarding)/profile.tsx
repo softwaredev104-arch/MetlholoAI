@@ -6,6 +6,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppTextField } from '@/components/ui/AppTextField';
+import { LocationPicker } from '@/components/ui/LocationPicker';
 import { useAuth } from '@/auth/AuthProvider';
 import { updateUserProfile } from '@/services/auth/userProfileService';
 import { uploadProfileImage } from '@/services/profile/profileMedia';
@@ -97,7 +98,15 @@ export default function ProfileOnboarding() {
       </View>
 
       <AppTextField label="Username / display name" value={name} onChangeText={setName} autoComplete="name" />
-      <AppButton title={location ? 'Location captured' : 'Use my current location'} variant="secondary" onPress={useMyLocation} loading={loading} />
+      <LocationPicker
+        value={locationLabel}
+        loading={loading}
+        onUseCurrent={useMyLocation}
+        onSelect={(selected) => {
+          setLocation(selected);
+          setLocationLabel(selected.label);
+        }}
+      />
       {location ? <AppText>📍 {locationLabel || `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`}</AppText> : null}
 
       <AppButton title="Continue" onPress={next} loading={loading} disabled={name.trim().length < 2} />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Linking, StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { requestCameraPermission, requestPhotoLibraryPermission } from '@/services/permissions/mobilePermissions';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -8,7 +8,7 @@ import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import { OptionPicker } from '@/components/ui/OptionPicker';
-import { INTELLIGENCE_MODELS, getModelsForSubject, type IntelligenceModel } from '@/services/intelligence/catalog';
+import { INTELLIGENCE_MODELS, getModelsForSubject } from '@/services/intelligence/catalog';
 import { predict, generateReport, normalizePredictionLabel, type PredictionResult } from '@/services/intelligence/client';
 import { createDiagnosis } from '@/services/intelligence/diagnosisRepository';
 import { createFarmRecord, listFarms, listFarmRecords, type FarmRecord } from '@/services/farms/farmRepository';

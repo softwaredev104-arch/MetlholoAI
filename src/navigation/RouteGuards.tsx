@@ -18,7 +18,9 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
 export function PublicRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
   useEffect(() => {
+    if (status === 'UNAUTHENTICATED') router.replace('/(auth)/welcome');
     if (status === 'AUTHENTICATED') router.replace('/(app)/(tabs)');
+    if (status === 'EMAIL_VERIFICATION_REQUIRED') router.replace('/(auth)/verify-email');
     if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
   }, [status]);
   if (status === 'AUTHENTICATING') return <AppLoadingState />;

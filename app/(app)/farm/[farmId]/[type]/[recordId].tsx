@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
@@ -45,7 +45,7 @@ export default function FarmRecordDetail() {
   }
   useEffect(() => { load(); }, [firebaseUser?.uid, farmId, recordId, type]);
 
-  async function remove() {
+  function remove() {
     if (!farmId || !record || !type) return;
     Alert.alert('Delete record?', `Delete “${record.name}”? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
@@ -61,13 +61,13 @@ export default function FarmRecordDetail() {
     <AppText variant="caption">{labels[type]}</AppText>
     <AppText variant="largeTitle">{record.name}</AppText>
     {record.status ? <AppText style={styles.muted}>Status: {record.status}</AppText> : null}
-    {record.category ? <AppText style={styles.muted}>Category: {String(record.category)}</AppText> : null}
+    {typeof record.category === 'string' && record.category ? <AppText style={styles.muted}>Category: {record.category}</AppText> : null}
     {record.quantity != null ? <AppText style={styles.muted}>Quantity: {record.quantity} {record.unit ?? ''}</AppText> : null}
     {record.notes ? <AppCard style={styles.card}><AppText variant="headline">Notes</AppText><AppText>{record.notes}</AppText></AppCard> : null}
     {(type === 'animals' || type === 'crops') ? <AppCard style={styles.card}><AppText variant="headline">Farm history</AppText><AppText style={styles.muted}>{linkedRecords.length} linked operational record{linkedRecords.length === 1 ? '' : 's'}</AppText>{linkedRecords.slice(0, 8).map(item => <Pressable key={`${item.type}-${item.id}`} onPress={() => router.push({ pathname: '/farm/[farmId]/[type]/[recordId]', params: { farmId, type: item.type, recordId: item.id } })}><AppText style={styles.link}>{item.name}</AppText></Pressable>)}<AppText style={styles.muted}>{diagnoses.length} diagnosis result{diagnoses.length === 1 ? '' : 's'}</AppText>{diagnoses.slice(0, 5).map(item => <AppText key={item.id}>{item.outcome} · {Math.round(item.confidence * 100)}%</AppText>)}</AppCard> : null}
-    {related ? <AppCard style={styles.card}><AppText variant="headline">Related farm asset</AppText><AppText>{related.name}</AppText><AppText style={styles.muted}>{related.category ? String(related.category) : ''}</AppText><AppButton title="Open related asset" variant="secondary" onPress={() => router.push({ pathname: '/farm/[farmId]/[type]/[recordId]', params: { farmId, type: related.type, recordId: related.id } })} /></AppCard> : null}
+    {related ? <AppCard style={styles.card}><AppText variant="headline">Related farm asset</AppText><AppText>{related.name}</AppText><AppText style={styles.muted}>{typeof related.category === 'string' ? related.category : ''}</AppText><AppButton title="Open related asset" variant="secondary" onPress={() => router.push({ pathname: '/farm/[farmId]/[type]/[recordId]', params: { farmId, type: related.type, recordId: related.id } })} /></AppCard> : null}
     {canDiagnose ? <AppButton title="Run AI diagnosis" onPress={() => router.push({ pathname: '/scan', params: { recordType: type, recordId: record.id } })} /> : null}
-    <AppButton title="Edit record" variant="secondary" onPress={() => router.replace({ pathname: '/farm/[farmId]/[type]', params: { farmId, type, editRecordId: record.id } })} />
+    <AppButton title="Edit record" variant="secondary" onPress={() => router.replace({ pathname: '/farm/[farmId]/[type]', params: { farmId, type, editRecordId: record.id, returnToDetail: 'true' } })} />
     <AppButton title="Delete record" variant="secondary" onPress={remove} />
     <AppButton title="Back to records" variant="secondary" onPress={() => router.back()} />
   </AppScreen>;

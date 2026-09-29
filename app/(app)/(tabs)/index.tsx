@@ -81,7 +81,7 @@ export default function Home() {
       <View style={styles.grid}>
         {shortcuts.map(([title, target, icon]) => (
           <View key={title} style={styles.shortcutWrap}>
-            <AppCard onTouchEnd={() => router.push(target as never)} style={styles.shortcut}>
+            <AppCard onTouchEnd={() => router.push(target)} style={styles.shortcut}>
               <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={28} color={colors.primary} />
               <AppText variant="headline">{title}</AppText>
             </AppCard>

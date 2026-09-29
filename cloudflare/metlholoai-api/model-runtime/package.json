@@ -1,0 +1,12 @@
+{
+  "name": "metlholoai-model-runtime",
+  "private": true,
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "@tensorflow/tfjs-node": "4.22.0",
+    "express": "5.2.1",
+    "formidable": "3.5.4",
+    "sharp": "0.34.5"
+  }
+}

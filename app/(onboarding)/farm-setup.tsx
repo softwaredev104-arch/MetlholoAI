@@ -77,9 +77,9 @@ export default function FarmSetup() {
     try {
       if (notifications.push) {
         const result = await requestNotificationPermission();
-        if (!result.granted) setNotifications(current => ({ ...current, push: false }));
-      }
-      await updateUserProfile(firebaseUser.uid, { notificationPreferences: notifications, onboardingStep: 4 });
+        const nextNotifications = { ...notifications, push: result.granted };
+        setNotifications(nextNotifications);
+        await updateUserProfile(firebaseUser.uid, { notificationPreferences: nextNotifications, onboardingStep: 4 });
       setStep(5);
     } catch { setStep(5); } finally { setLoading(false); }
   }
@@ -152,7 +152,8 @@ export default function FarmSetup() {
         <Pressable onPress={() => setTerms(v=>!v)} style={styles.check}><AppText>{terms ? '☑' : '☐'} I accept the Terms of Service</AppText></Pressable>
         <Pressable onPress={() => setPrivacy(v=>!v)} style={styles.check}><AppText>{privacy ? '☑' : '☐'} I accept the Privacy Policy</AppText></Pressable>
         <AppButton title="Subscribe — Test Access" onPress={subscribeTest} loading={loading} disabled={!terms || !privacy} />
-        <AppText variant="caption" style={styles.center}>PayPal integration will replace this test entitlement without changing the onboarding flow.</AppText>
+        <AppButton title="Not now — stay on onboarding" variant="secondary" onPress={() => {}} />
+        <AppText variant="caption" style={styles.center}>PayPal checkout is intentionally disabled for this testing build. The test button activates Premium access so the complete app can be exercised end-to-end.</AppText>
       </> : null}
     </AppScreen>
   );

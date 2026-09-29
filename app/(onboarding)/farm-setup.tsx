@@ -59,8 +59,12 @@ export default function FarmSetup() {
   async function saveCategories(){
     if(!firebaseUser)return;
     setLoading(true);
-    try{await updateUserProfile(firebaseUser.uid,{animalCategories:animals,cropCategories:crops,farmTypes:[farmType],onboardingStep:3});setStep(4);}
-    finally{setLoading(false);}
+    try{
+      await updateUserProfile(firebaseUser.uid,{animalCategories:animals,cropCategories:crops,farmTypes:[farmType],onboardingStep:3});
+      setStep(4);
+    }catch(error){
+      Alert.alert('Could not save selections',error instanceof Error?error.message:'Please try again.');
+    }finally{setLoading(false);}
   }
 
   async function saveNotifications(){
@@ -75,8 +79,9 @@ export default function FarmSetup() {
       }
       await updateUserProfile(firebaseUser.uid,{notificationPreferences:nextNotifications,onboardingStep:4});
       setStep(5);
-    }catch{setStep(5);}
-    finally{setLoading(false);}
+    }catch(error){
+      Alert.alert('Could not save notification preferences',error instanceof Error?error.message:'Please try again.');
+    }finally{setLoading(false);}
   }
 
   async function subscribeTest(){

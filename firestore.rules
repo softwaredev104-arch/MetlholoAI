@@ -38,6 +38,33 @@ service cloud.firestore {
         && resource.data.farmId == farmId;
     }
 
+    // Public, published agricultural reference knowledge. Writes are ingestion/admin only.
+    match /agriculturalCatalog/{productId} {
+      allow read: if resource.data.publicationStatus == 'published';
+      allow create, update, delete: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /marketPrices/{priceId} {
+      allow read: if resource.data.publicationStatus == 'published';
+      allow create, update, delete: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /cropGuidelines/{guidelineId} {
+      allow read: if resource.data.publicationStatus == 'published';
+      allow create, update, delete: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Farmer-owned storefront data is separate from the reference catalog.
+    match /marketplaceListings/{listingId} {
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.currency == 'BWP';
+      allow read: if request.auth != null
+        && (resource.data.ownerId == request.auth.uid || resource.data.status == 'published');
+      allow update, delete: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -14,3 +14,13 @@ export async function updateUserProfile(uid: string, patch: Partial<UserProfile>
     updatedAt: serverTimestamp(),
   });
 }
+
+export async function completeOnboarding(uid: string) {
+  await updateUserProfile(uid, {
+    onboardingCompleted: true,
+    onboardingStep: 5,
+    subscriptionTier: 'PREMIUM',
+    subscriptionProvider: 'test',
+    subscribedAt: serverTimestamp(),
+  });
+}

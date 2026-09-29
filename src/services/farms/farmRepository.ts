@@ -81,9 +81,7 @@ export async function createFarmRecord(ownerId: string, farmId: string, type: Fa
 }
 
 export async function updateFarmRecord(farmId: string, type: FarmRecordType, id: string, input: Partial<FarmRecord>) {
-  const definedInput = Object.fromEntries(
-    Object.entries(input).filter(([, value]) => value !== undefined),
-  );
+  const definedInput = stripUndefined(input);
   await updateDoc(doc(db(), 'farms', farmId, type, id), { ...definedInput, updatedAt: new Date().toISOString() });
 }
 

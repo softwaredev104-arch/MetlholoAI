@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
@@ -43,7 +44,7 @@ export default function IntelligenceExplorer() {
         subject={subject ?? ''}
         models={subject ? getModelsForSubject(subject) : []}
         onClose={() => setSubject(null)}
-        onSelect={model => { setSelected(model); setSubject(null); }}
+        onSelect={model => { setSelected(model); setSubject(null); router.push({ pathname: '/model-guide', params: { modelId: model.id } }); }}
       />
 
       {selected ? (

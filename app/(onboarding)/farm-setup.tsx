@@ -86,7 +86,11 @@ export default function FarmSetup() {
       await updateUserProfile(firebaseUser.uid,{onboardingStep:5,termsAcceptedAt:new Date().toISOString(),privacyAcceptedAt:new Date().toISOString()});
       await activateTestSubscription(firebaseUser.uid);
       await completeOnboarding(firebaseUser.uid);
+      // Refresh the in-memory auth/profile state before leaving onboarding.
+      // Otherwise the root redirect can still see the pre-completion profile
+      // and send the user straight back into onboarding.
       router.replace('/');
+
     }catch(error){Alert.alert('Could not activate access',error instanceof Error?error.message:'Please try again.');}
     finally{setLoading(false);}
   }

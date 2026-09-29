@@ -9,6 +9,7 @@ import { listFarms, listFarmRecords, type FarmRecord, type FarmRecordType } from
 import { Spacing } from '@/design/spacing';
 import { buildFarmRecommendations, type FarmRecommendation } from '@/services/recommendations/recommendationService';
 import { RecommendationCard } from '@/components/recommendations/RecommendationCard';
+import { countOpenTasks, countActiveListings, sumNumericQuantities } from '@/services/dashboard/dashboardMetrics';
 
 const TYPES: FarmRecordType[] = ['animals','crops','healthRecords','feedingPlans','tasks','marketplace'];
 
@@ -51,9 +52,9 @@ export default function Dashboard() {
   const crops = records.crops.length;
   const health = records.healthRecords.length;
   const feeding = records.feedingPlans.length;
-  const tasksOpen = records.tasks.filter(r => !['done','completed','complete'].includes((r.status ?? '').toLowerCase())).length;
-  const listings = records.marketplace.filter(r => (r.status ?? '').toLowerCase() !== 'sold').length;
-  const cropQuantity = records.crops.reduce((sum, r) => sum + (typeof r.quantity === 'number' ? r.quantity : 0), 0);
+  const tasksOpen = countOpenTasks(records.tasks);
+  const listings = countActiveListings(records.marketplace);
+  const cropQuantity = sumNumericQuantities(records.crops);
 
   return (
     <AppScreen>

@@ -39,7 +39,7 @@ const singular: Record<FarmRecordType, string> = {
 
 export default function FarmRecords() {
   const { colors } = useTheme();
-  const { farmId, type, editRecordId } = useLocalSearchParams<{ farmId: string; type: FarmRecordType; editRecordId?: string }>();
+  const { farmId, type, editRecordId, returnToDetail } = useLocalSearchParams<{ farmId: string; type: FarmRecordType; editRecordId?: string; returnToDetail?: string }>();
   const { firebaseUser } = useAuth();
   const [records, setRecords] = useState<FarmRecord[]>([]);
   const [search, setSearch] = useState('');
@@ -101,9 +101,9 @@ export default function FarmRecords() {
     setStatus(record.status ?? '');
     setQuantity(record.quantity == null ? '' : String(record.quantity));
     setUnit(record.unit ?? '');
-    setCategory(String(record.category ?? ''));
-    setModel(String(record.model ?? ''));
-    setRelatedRecordId(String(record.relatedRecordId ?? ''));
+    setCategory(typeof record.category === 'string' ? record.category : '');
+    setModel(typeof record.model === 'string' ? record.model : '');
+    setRelatedRecordId(typeof record.relatedRecordId === 'string' ? record.relatedRecordId : '');
     setRelatedRecordType(record.relatedRecordType === 'animals' || record.relatedRecordType === 'crops' ? record.relatedRecordType : '');
     setModalOpen(true);
   }
@@ -132,6 +132,9 @@ export default function FarmRecords() {
       }
       if (editing) await load();
       setModalOpen(false);
+      if (editing && returnToDetail === 'true') {
+        router.replace({ pathname: '/farm/[farmId]/[type]/[recordId]', params: { farmId, type: validType, recordId: editing.id } });
+      }
     } catch (error) {
       Alert.alert('Could not save', error instanceof Error ? error.message : 'Please try again.');
     } finally {

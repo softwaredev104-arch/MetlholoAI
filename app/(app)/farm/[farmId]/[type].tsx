@@ -52,6 +52,8 @@ export default function FarmRecords() {
   const [unit, setUnit] = useState('');
   const [category, setCategory] = useState('');
   const [model, setModel] = useState('');
+  const [relatedRecordId, setRelatedRecordId] = useState('');
+  const [relatedRecords, setRelatedRecords] = useState<FarmRecord[]>([]);
 
   const validType = useMemo(() => type && type in labels ? type : null, [type]);
 
@@ -71,6 +73,7 @@ export default function FarmRecords() {
     setUnit('');
     setCategory('');
     setModel('');
+    setRelatedRecordId('');
     setModalOpen(true);
   }
 
@@ -83,6 +86,7 @@ export default function FarmRecords() {
     setUnit(record.unit ?? '');
     setCategory(String(record.category ?? ''));
     setModel(String(record.model ?? ''));
+    setRelatedRecordId(String(record.relatedRecordId ?? ''));
     setModalOpen(true);
   }
 
@@ -98,6 +102,8 @@ export default function FarmRecords() {
         unit: unit.trim() || undefined,
         category: category || undefined,
         model: model || undefined,
+        relatedRecordId: relatedRecordId || undefined,
+        relatedRecordName: relatedRecordId ? relatedRecords.find(item => item.id === relatedRecordId)?.name : undefined,
       };
       if (editing) {
         await updateFarmRecord(farmId, validType, editing.id, input);
@@ -112,6 +118,10 @@ export default function FarmRecords() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function openRecord(record: FarmRecord) {
+    router.push({ pathname: '/farm/[farmId]/[type]/[recordId]', params: { farmId, type: validType!, recordId: record.id } });
   }
 
   function remove(record: FarmRecord) {
@@ -171,6 +181,9 @@ export default function FarmRecords() {
                   <AppText style={styles.link}>Diagnose</AppText>
                 </Pressable>
               ) : null}
+              <Pressable onPress={() => openRecord(record)} accessibilityRole="button">
+                <AppText style={styles.link}>Open</AppText>
+              </Pressable>
               <Pressable onPress={() => openEdit(record)} accessibilityRole="button">
                 <AppText style={styles.link}>Edit</AppText>
               </Pressable>
@@ -193,6 +206,7 @@ export default function FarmRecords() {
             {validType === 'crops' ? <OptionPicker label="Crop" options={CROPS} selected={CROPS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=CROPS.find(o=>o.id===id)?.label??'';setCategory(label);setModel('');if(!name)setName(label);}} /> : null}
             {validType === 'crops' && category ? <OptionPicker label="Available intelligence model" options={getOptionsForCrop(category).map(option=>({id:option.id,label:option.label,description:option.disease}))} selected={model} onChange={(id)=>setModel(String(id))} /> : null}
             {validType === 'healthRecords' ? <OptionPicker label="Condition / disease / pest" options={INTELLIGENCE_DISEASES_AND_PESTS} selected={INTELLIGENCE_DISEASES_AND_PESTS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=INTELLIGENCE_DISEASES_AND_PESTS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
+            {(validType === 'healthRecords' || validType === 'tasks' || validType === 'feedingPlans') ? <OptionPicker label="Related farm asset" options={relatedRecords.map(item => ({ id: item.id, label: item.name }))} selected={relatedRecordId} onChange={(id)=>setRelatedRecordId(String(id))} /> : null}
             {validType === 'feedingPlans' ? <OptionPicker label="Feed type" options={FEED_TYPES} selected={FEED_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=FEED_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'tasks' ? <OptionPicker label="Task type" options={TASK_TYPES} selected={TASK_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=TASK_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'marketplace' ? <OptionPicker label="Marketplace category" options={MARKETPLACE_CATEGORIES} selected={MARKETPLACE_CATEGORIES.find(o=>o.label===category)?.id??''} onChange={(id)=>setCategory(MARKETPLACE_CATEGORIES.find(o=>o.id===id)?.label??'')} /> : null}

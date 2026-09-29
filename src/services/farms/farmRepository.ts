@@ -39,7 +39,10 @@ export async function listFarms(ownerId: string): Promise<Farm[]> {
 
 export async function createFarm(ownerId: string, input: Omit<Partial<Farm>, 'id' | 'ownerId' | 'createdAt'> & Pick<Farm, 'name'>) {
   const createdAt = new Date().toISOString();
-  const ref = await addDoc(collection(db(), 'farms'), { ...input, ownerId, createdAt });
+  const definedInput = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  );
+  const ref = await addDoc(collection(db(), 'farms'), { ...definedInput, ownerId, createdAt });
   return { id: ref.id, ownerId, ...input, createdAt } as Farm;
 }
 

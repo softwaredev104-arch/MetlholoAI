@@ -57,7 +57,7 @@ async function main() {
     console.log(JSON.stringify({ stage: 'PREDICTION_VERIFIED', subject, disease, confidence, response: prediction }));
 
     if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_UNAVAILABLE: GEMINI_API_KEY is not configured in GitHub Actions.');
+      console.log(JSON.stringify({ stage: 'GEMINI_BLOCKED', reason: 'GEMINI_API_KEY is not configured in GitHub Actions.' })); return;
     }
 
     const reportResponse = await fetch(`http://127.0.0.1:${port}/report`, {

@@ -9,6 +9,8 @@ on:
 permissions:
   contents: read
 
+# Phase 6 runtime gate: prediction first; Gemini runs automatically when GEMINI_API_KEY is configured.
+
 jobs:
   runtime:
     runs-on: ubuntu-latest

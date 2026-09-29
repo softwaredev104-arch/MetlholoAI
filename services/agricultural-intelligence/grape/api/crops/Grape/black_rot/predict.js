@@ -38,7 +38,7 @@ async function loadModel() {
     "models",
     "crops",
     "grape",
-    "Black_rot",
+    "Black rot",
     "metadata.json"
   );
 

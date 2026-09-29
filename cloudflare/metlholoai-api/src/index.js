@@ -59,6 +59,16 @@ export default {
       });
     }
 
+    if (url.pathname === "/runtime-health") {
+      const targetUrl = new URL(request.url);
+      targetUrl.pathname = "/ready";
+      targetUrl.search = "";
+      return getContainer(
+        env.MODEL_RUNTIME,
+        "metlholoai-shared"
+      ).fetch(new Request(targetUrl.toString(), request));
+    }
+
     if (url.pathname === "/predict" || url.pathname === "/report") {
       const model =
         url.searchParams.get("model") ||

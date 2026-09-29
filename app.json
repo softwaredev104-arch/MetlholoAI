@@ -9,17 +9,19 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.myjobe.Metlholoai"
+      "bundleIdentifier": "com.myjobe.Metlholoai",
+      "googleServicesFile": "./ios/GoogleService-Info.plist"
     },
     "android": {
-      "package": "com.myjobe.Metlholoai"
+      "package": "com.myjobe.Metlholoai",
+      "googleServicesFile": "./android/app/google-services.json"
     },
     "plugins": [
       "expo-router",
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "metlholoai"
+          "iosUrlScheme": "com.googleusercontent.apps.826731247115-iplki3gad6jp3rt5eatnfkl7bhlioe0a.apps.googleusercontent.com"
         }
       ],
       [

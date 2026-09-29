@@ -6,7 +6,6 @@ import { useAuth } from '@/auth/AuthProvider';
 export function ProtectedRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
   const segments = useSegments();
-  const segmentKey = segments.join('/');
   const rootSegment = segments[0] ?? '';
 
   useEffect(() => {
@@ -23,7 +22,11 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
     if (status === 'ACCOUNT_SUSPENDED' && rootSegment !== 'suspended') {
       router.replace('/suspended');
     }
-  }, [status, rootSegment, segmentKey]);
+  }, [status, rootSegment]);
+
+  if (status === 'PROFILE_INCOMPLETE' && rootSegment !== '(onboarding)') {
+    return <AppLoadingState />;
+  }
 
   if (status !== 'AUTHENTICATED' && status !== 'PROFILE_INCOMPLETE') {
     return <AppLoadingState />;
@@ -35,7 +38,6 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
 export function PublicRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
   const segments = useSegments();
-  const segmentKey = segments.join('/');
   const rootSegment = segments[0] ?? '';
   const currentRoute = segments[segments.length - 1] ?? '';
 
@@ -53,7 +55,7 @@ export function PublicRoute({ children }: PropsWithChildren) {
     if (status === 'PROFILE_INCOMPLETE' && rootSegment !== '(onboarding)') {
       router.replace('/(onboarding)/profile');
     }
-  }, [status, rootSegment, currentRoute, segmentKey]);
+  }, [status, rootSegment, currentRoute]);
 
   if (status === 'AUTHENTICATING') return <AppLoadingState />;
   return children;

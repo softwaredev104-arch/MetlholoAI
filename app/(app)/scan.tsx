@@ -129,6 +129,16 @@ export default function Scan() {
       } catch {
         setReference(null);
       }
+      if (normalizeConfidence(result.confidence) >= 95) {
+        Alert.alert(
+          'High-confidence result',
+          'MetlholoAI returned ' + normalizeConfidence(result.confidence).toFixed(1) + '% confidence for “' + outcome + '”. Review the report and confirm the next farm action.',
+          [
+            { text: 'Review result', style: 'cancel' },
+            { text: 'Create follow-up task', onPress: () => { void createFollowUpTask(); } },
+          ],
+        );
+      }
     } catch (error) {
       Alert.alert('Prediction failed', error instanceof Error ? error.message : 'The intelligence service could not be reached.');
     } finally {

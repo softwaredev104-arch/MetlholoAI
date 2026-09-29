@@ -13,17 +13,31 @@ import {
 import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirestoreDb } from '@/services/firebase/client';
 import type { Role, UserProfile } from '@/types/user';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+type GoogleSigninModule = typeof import('@react-native-google-signin/google-signin');
 
 let googleConfigured = false;
 
+function getGoogleSignin(): GoogleSigninModule['GoogleSignin'] {
+  try {
+    return require('@react-native-google-signin/google-signin').GoogleSignin as GoogleSigninModule['GoogleSignin'];
+  } catch {
+    throw new Error(
+      'Google Sign-In is unavailable in this app binary. For native Google Sign-In, rebuild MetlholoAI with `npx expo run:android` or `npx expo run:ios`; Expo Go does not include the Google Sign-In native module.',
+    );
+  }
+}
+
 function configureGoogle() {
-  if (googleConfigured) return;
+  const GoogleSignin = getGoogleSignin();
+  if (googleConfigured) return GoogleSignin;
+
   GoogleSignin.configure({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   });
   googleConfigured = true;
+  return GoogleSignin;
 }
 
 export const authService = {
@@ -56,10 +70,12 @@ export const authService = {
     return credential.user;
   },
   async signInWithGoogle() {
-    configureGoogle();
+    const GoogleSignin = configureGoogle();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const response = await GoogleSignin.signIn();
-    if (response.type !== 'success' || !response.data.idToken) throw new Error('Google sign-in did not return an ID token.');
+    if (response.type !== 'success' || !response.data.idToken) {
+      throw new Error('Google sign-in did not return an ID token.');
+    }
     const credential = GoogleAuthProvider.credential(response.data.idToken);
     const user = (await signInWithCredential(getFirebaseAuth(), credential)).user;
     const profileRef = doc(getFirestoreDb(), 'users', user.uid);
@@ -84,7 +100,12 @@ export const authService = {
     await sendPasswordResetEmail(getFirebaseAuth(), email.trim());
   },
   async logout() {
-    try { await GoogleSignin.signOut(); } catch {}
+    try {
+      const GoogleSignin = getGoogleSignin();
+      await GoogleSignin.signOut();
+    } catch {
+      // Google Sign-In may not be available in Expo Go or a non-Google session.
+    }
     await signOut(getFirebaseAuth());
   },
 };

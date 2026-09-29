@@ -44,6 +44,7 @@ export default function FarmRecords() {
   const [records, setRecords] = useState<FarmRecord[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<FarmRecord | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
@@ -61,7 +62,16 @@ export default function FarmRecords() {
 
   async function load() {
     if (!firebaseUser || !farmId || !validType) return;
-    setRecords(await listFarmRecords(firebaseUser.uid, farmId, validType));
+    setLoading(true);
+    setError(null);
+    try {
+      setRecords(await listFarmRecords(firebaseUser.uid, farmId, validType));
+    } catch (loadError) {
+      setRecords([]);
+      setError(loadError instanceof Error ? loadError.message : 'Could not load these records. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, [firebaseUser?.uid, farmId, validType]);
@@ -191,6 +201,8 @@ export default function FarmRecords() {
       <AppButton title={`Add ${singular[validType]}`} loading={loading} onPress={openCreate} />
       <TextInput value={search} onChangeText={setSearch} placeholder={`Search ${label.toLowerCase()}...`} placeholderTextColor={colors.textTertiary} style={[styles.input, styles.searchInput, { color: colors.textPrimary, borderColor: colors.border }]} accessibilityLabel={`Search ${label}`} />
 
+      {error ? <AppCard style={styles.errorCard}><AppText variant="headline">Records unavailable</AppText><AppText style={styles.muted}>{error}</AppText><AppButton title="Retry" variant="secondary" loading={loading} onPress={load} /></AppCard> : null}
+
       {filteredRecords.map(record => (
         <AppCard key={record.id} style={styles.record}>
           <View style={styles.row}>
@@ -299,5 +311,6 @@ const styles = StyleSheet.create({
   searchInput: { marginTop: Spacing.md },
   input: { minHeight: 48, borderWidth: 1, borderRadius: 12, paddingHorizontal: Spacing.md, fontSize: 16 },
   notesInput: { minHeight: 90, textAlignVertical: 'top', paddingTop: Spacing.md },
+  errorCard: { marginTop: Spacing.md },
   modalActions: { flexDirection: 'row', gap: Spacing.md, justifyContent: 'flex-end' },
 });

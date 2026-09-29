@@ -1,9 +1,9 @@
 name: Execute Agricultural Foundation Import
 
 on:
-  pull_request:
+  push:
     branches:
-      - foundation/metlholoai-react-native
+      - audit/model-integration-phase6
 
 permissions:
   contents: write

@@ -32,3 +32,4 @@ describe('prediction response contract', () => {
     expect(normalizePredictionLabel({ prediction: 'foot-and-mouth', confidence: 0.95 }, cattle)).toBe('Foot and Mouth Disease');
   });
 });
+

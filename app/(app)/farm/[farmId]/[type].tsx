@@ -6,7 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
 import { OptionPicker } from '@/components/ui/OptionPicker';
-import { ANIMALS, CROPS, INTELLIGENCE_DISEASES_AND_PESTS, VACCINES, FERTILIZERS, FEED_TYPES, UNITS, TASK_TYPES, MARKETPLACE_CATEGORIES, MODEL_OPTIONS, getOptionsForCrop } from '@/data/agricultureDictionary';
+import { ANIMALS, CROPS, INTELLIGENCE_DISEASES_AND_PESTS, VACCINES, FERTILIZERS, FEED_TYPES, UNITS, TASK_TYPES, MARKETPLACE_CATEGORIES, getOptionsForCrop } from '@/data/agricultureDictionary';
 import { useAuth } from '@/auth/AuthProvider';
 import {
   createFarmRecord,
@@ -184,7 +184,6 @@ export default function FarmRecords() {
             {validType === 'animals' ? <OptionPicker label="Animal category" options={ANIMALS} selected={ANIMALS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=ANIMALS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'crops' ? <OptionPicker label="Crop" options={CROPS} selected={CROPS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=CROPS.find(o=>o.id===id)?.label??'';setCategory(label);setModel('');if(!name)setName(label);}} /> : null}
             {validType === 'crops' && category ? <OptionPicker label="Available intelligence model" options={getOptionsForCrop(category).map(option=>({id:option.id,label:option.label,description:option.disease}))} selected={model} onChange={(id)=>setModel(String(id))} /> : null}
-            {validType === 'crops' ? <OptionPicker label="Crop" options={CROPS} selected={CROPS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=CROPS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'healthRecords' ? <OptionPicker label="Condition / disease / pest" options={INTELLIGENCE_DISEASES_AND_PESTS} selected={INTELLIGENCE_DISEASES_AND_PESTS.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=INTELLIGENCE_DISEASES_AND_PESTS.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'feedingPlans' ? <OptionPicker label="Feed type" options={FEED_TYPES} selected={FEED_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=FEED_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}
             {validType === 'tasks' ? <OptionPicker label="Task type" options={TASK_TYPES} selected={TASK_TYPES.find(o=>o.label===category)?.id??''} onChange={(id)=>{const label=TASK_TYPES.find(o=>o.id===id)?.label??'';setCategory(label);if(!name)setName(label);}} /> : null}

@@ -11,6 +11,8 @@ export function getFriendlyErrorMessage(error: unknown) {
       return 'Choose a stronger password with at least 6 characters.';
     case 'auth/invalid-email':
       return 'Enter a valid email address.';
+    case 'auth/too-many-requests':
+      return 'Too many verification requests were made. Wait a little before requesting another email, then use the latest verification email.';
     case 'auth/network-request-failed':
       return 'We could not reach MetlholoAI. Check your connection and try again.';
     default:

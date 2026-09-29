@@ -64,6 +64,14 @@ export default function FarmRecords() {
 
   useEffect(() => { load(); }, [firebaseUser?.uid, farmId, validType]);
 
+  useEffect(() => {
+    if (!firebaseUser || !farmId || !validType || !['healthRecords', 'tasks', 'feedingPlans'].includes(validType)) return;
+    Promise.all([
+      listFarmRecords(firebaseUser.uid, farmId, 'animals'),
+      listFarmRecords(firebaseUser.uid, farmId, 'crops'),
+    ]).then(([animals, crops]) => setRelatedRecords(validType === 'feedingPlans' ? animals : [...animals, ...crops])).catch(() => setRelatedRecords([]));
+  }, [firebaseUser?.uid, farmId, validType]);
+
   function openCreate() {
     setEditing(null);
     setName('');

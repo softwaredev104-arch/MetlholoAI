@@ -1,0 +1,1 @@
+import {createContext,useContext} from 'react'; import type {AppColors} from './colors'; import {lightColors} from './colors'; export type ThemeMode='light'|'dark'|'system'; export const ThemeContext=createContext<{mode:ThemeMode;colors:AppColors}>({mode:'system',colors:lightColors}); export function useTheme(){return useContext(ThemeContext);}

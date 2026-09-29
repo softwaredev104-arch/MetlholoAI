@@ -12,12 +12,23 @@ service cloud.firestore {
 
       allow read: if request.auth != null && request.auth.uid == userId;
 
+      // During the current test build, allow the signed-in owner to promote
+      // their own newly-created FREE account to PREMIUM only through the
+      // explicit test entitlement path. Production payment entitlements
+      // must be written by trusted backend/webhook code instead.
       allow update: if request.auth != null
         && request.auth.uid == userId
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.role == resource.data.role
-        && request.resource.data.subscriptionTier == resource.data.subscriptionTier
-        && request.resource.data.status == resource.data.status;
+        && request.resource.data.status == resource.data.status
+        && (
+          request.resource.data.subscriptionTier == resource.data.subscriptionTier
+          || (
+            resource.data.subscriptionTier == 'FREE'
+            && request.resource.data.subscriptionTier == 'PREMIUM'
+            && request.resource.data.subscriptionProvider == 'test'
+          )
+        );
 
       allow delete: if false;
     }

@@ -5,17 +5,17 @@ import { AppText } from '@/components/ui/AppText';
 type State = { error: Error | null };
 
 export class ErrorBoundary extends Component<PropsWithChildren, State> {
-  state: State = { error: null };
+  override state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('MetlholoAI fatal UI error', error, info);
   }
 
-  render() {
+  override render() {
     if (this.state.error) {
       return (
         <View style={styles.container}>

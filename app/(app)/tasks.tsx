@@ -65,7 +65,7 @@ export default function Tasks() {
           <View
             style={[
               styles.progress,
-              { backgroundColor: colors.primary, width: String(progress) + '%' },
+              { backgroundColor: colors.primary, width: (String(progress) + '%') as `${number}%` },
             ]}
           />
         </View>

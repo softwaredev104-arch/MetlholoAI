@@ -40,7 +40,7 @@ const firebase = FirebaseSchema.safeParse({
 });
 
 export const isFirebaseConfigured = firebase.success;
-export const googleDriveClientId = process.env.EXPO_PUBLIC_GOOGLE_DRIVE_CLIENT_ID ?? '';
+export const googleDriveClientId = process.env.EXPO_PUBLIC_GOOGLE_DRIVE_CLIENT_ID ?? '826731247115-vresv379tvero1muggu3lcctj26fnts8.apps.googleusercontent.com';
 export const isGoogleDriveConfigured = googleDriveClientId.length > 0;
 
 export function getFirebaseConfig() {

@@ -167,10 +167,15 @@ export const authService = {
 
     const accessToken = await getGoogleAccessToken();
     const firebaseCredential = GoogleAuthProvider.credential(null, accessToken);
-    const credential = await signInWithCredential(
-      getFirebaseAuth(),
-      firebaseCredential,
-    );
+    const credential = await Promise.race([
+      signInWithCredential(getFirebaseAuth(), firebaseCredential),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Firebase sign-in timed out. Please try again.')),
+          15_000,
+        ),
+      ),
+    ]);
 
     await ensureGoogleUserProfile(credential.user);
     return credential.user;

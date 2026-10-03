@@ -1,30 +1,92 @@
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
-import { getFirestoreDb } from '@/services/firebase/client';
-import { AgriculturalProductSchema, CropGuidelineSchema, MarketPriceSchema, type AgriculturalProduct, type CropGuideline, type MarketPrice } from './models';
+import type {
+  AgriculturalProduct,
+  CropGuideline,
+  MarketPrice,
+} from './models';
 
-const db = () => getFirestoreDb();
+const MARKET_PRICES: MarketPrice[] = [
+  {
+    id: 'maize-market-reference',
+    commodity: 'Maize',
+    perMtPrice: 4200,
+    currency: 'BWP',
+    priceType: 'other',
+    country: 'Botswana',
+    publicationStatus: 'published',
+    source: {
+      source: 'MetlholoAI design reference',
+      country: 'Botswana',
+      confidence: 'low',
+    },
+  },
+  {
+    id: 'cattle-market-reference',
+    commodity: 'Cattle',
+    perBagPrice: 8500,
+    currency: 'BWP',
+    priceType: 'other',
+    country: 'Botswana',
+    publicationStatus: 'published',
+    source: {
+      source: 'MetlholoAI design reference',
+      country: 'Botswana',
+      confidence: 'low',
+    },
+  },
+];
 
-export async function listPublishedProducts(filters: { category?: string; targetCrop?: string; targetSpecies?: string; disease?: string; targetPest?: string } = {}): Promise<AgriculturalProduct[]> {
-  const snapshot = await getDocs(query(collection(db(), 'agriculturalCatalog'), where('publicationStatus', '==', 'published'), limit(100)));
-  let items = snapshot.docs.map(d => AgriculturalProductSchema.parse({ id: d.id, ...d.data() }));
-  if (filters.category) items = items.filter(x => x.category === filters.category);
-  if (filters.targetCrop) items = items.filter(x => x.targetCrop?.toLowerCase() === filters.targetCrop!.toLowerCase());
-  if (filters.targetSpecies) items = items.filter(x => x.targetSpecies?.toLowerCase() === filters.targetSpecies!.toLowerCase());
-  if (filters.disease) items = items.filter(x => x.disease?.toLowerCase() === filters.disease!.toLowerCase());
-  if (filters.targetPest) items = items.filter(x => x.targetPest?.toLowerCase() === filters.targetPest!.toLowerCase());
-  return items;
+const PRODUCTS: AgriculturalProduct[] = [];
+const GUIDELINES: CropGuideline[] = [];
+
+export async function listPublishedProducts(filters: {
+  category?: string;
+  targetCrop?: string;
+  targetSpecies?: string;
+  disease?: string;
+  targetPest?: string;
+} = {}): Promise<AgriculturalProduct[]> {
+  return PRODUCTS.filter(item => {
+    if (filters.category && item.category !== filters.category) return false;
+    if (
+      filters.targetCrop &&
+      item.targetCrop?.toLowerCase() !== filters.targetCrop.toLowerCase()
+    ) return false;
+    if (
+      filters.targetSpecies &&
+      item.targetSpecies?.toLowerCase() !== filters.targetSpecies.toLowerCase()
+    ) return false;
+    if (
+      filters.disease &&
+      item.disease?.toLowerCase() !== filters.disease.toLowerCase()
+    ) return false;
+    if (
+      filters.targetPest &&
+      item.targetPest?.toLowerCase() !== filters.targetPest.toLowerCase()
+    ) return false;
+    return true;
+  });
 }
 
-export async function listPublishedGuidelines(problem: string, crop?: string): Promise<CropGuideline[]> {
-  const snapshot = await getDocs(query(collection(db(), 'cropGuidelines'), where('publicationStatus', '==', 'published'), limit(100)));
+export async function listPublishedGuidelines(
+  problem: string,
+  crop?: string,
+): Promise<CropGuideline[]> {
   const normalized = problem.trim().toLowerCase();
-  return snapshot.docs.map(d => CropGuidelineSchema.parse({ id: d.id, ...d.data() }))
-    .filter(x => [x.problem, ...x.relatedProblems].some(p => p.toLowerCase() === normalized || p.toLowerCase().includes(normalized)))
-    .filter(x => !crop || !x.crop || x.crop.toLowerCase() === crop.toLowerCase());
+  return GUIDELINES.filter(item =>
+    [item.problem, ...item.relatedProblems].some(value =>
+      value.toLowerCase().includes(normalized),
+    ),
+  ).filter(
+    item => !crop || !item.crop || item.crop.toLowerCase() === crop.toLowerCase(),
+  );
 }
 
-export async function listPublishedMarketPrices(commodity?: string): Promise<MarketPrice[]> {
-  const snapshot = await getDocs(query(collection(db(), 'marketPrices'), where('publicationStatus', '==', 'published'), limit(100)));
-  const items = snapshot.docs.map(d => MarketPriceSchema.parse({ id: d.id, ...d.data() }));
-  return commodity ? items.filter(x => x.commodity.toLowerCase() === commodity.toLowerCase()) : items;
+export async function listPublishedMarketPrices(
+  commodity?: string,
+): Promise<MarketPrice[]> {
+  return commodity
+    ? MARKET_PRICES.filter(
+        item => item.commodity.toLowerCase() === commodity.toLowerCase(),
+      )
+    : MARKET_PRICES;
 }

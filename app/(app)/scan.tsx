@@ -9,7 +9,6 @@ import { AppButton } from '@/components/ui/AppButton';
 import { AppCard } from '@/components/ui/AppCard';
 import {
   INTELLIGENCE_MODELS,
-  type IntelligenceCategory,
   type IntelligenceModel,
 } from '@/services/intelligence/catalog';
 import {

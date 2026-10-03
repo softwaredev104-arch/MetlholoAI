@@ -56,4 +56,4 @@ export const darkColors = {
   market: '#B395C1',
 } as const;
 
-export type AppColors = typeof lightColors;
+export type AppColors = { [K in keyof typeof lightColors]: string };

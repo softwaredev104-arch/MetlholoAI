@@ -1,89 +1,74 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { authService, type AuthUser } from '@/services/auth/authService';
-import {
-  createInitialUserProfile,
-  getUserProfile,
-} from '@/services/auth/userProfileService';
-import { isAuthConfigured } from '@/config/env';
+import type { User } from 'firebase/auth';
+import { authService } from '@/services/auth/authService';
+import { getUserProfile } from '@/services/auth/userProfileService';
+import { isFirebaseConfigured } from '@/config/env';
 import type { UserProfile } from '@/types/user';
 
 export type AuthStatus =
   | 'AUTHENTICATING'
   | 'UNAUTHENTICATED'
   | 'AUTHENTICATED'
+  | 'EMAIL_VERIFICATION_REQUIRED'
   | 'PROFILE_INCOMPLETE'
-  | 'ACCOUNT_SUSPENDED'
-  | 'CONFIGURATION_REQUIRED';
+  | 'ACCOUNT_SUSPENDED';
 
 type AuthContextValue = {
-  user: AuthUser | null;
+  firebaseUser: User | null;
   profile: UserProfile | null;
   status: AuthStatus;
-  refreshSession: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [status, setStatus] = useState<AuthStatus>(
-    isAuthConfigured ? 'AUTHENTICATING' : 'CONFIGURATION_REQUIRED',
+    isFirebaseConfigured ? 'AUTHENTICATING' : 'UNAUTHENTICATED',
   );
 
-  const applyProfile = (next: UserProfile | null) => {
+  const refreshProfile = async () => {
+    if (!firebaseUser) return;
+    const next = await getUserProfile(firebaseUser.uid);
     setProfile(next);
-    if (!next || !next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
+    if (!next) setStatus('PROFILE_INCOMPLETE');
     else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
+    else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
     else setStatus('AUTHENTICATED');
   };
 
-  const refreshProfile = async () => {
-    if (!user) return;
-    let next = await getUserProfile(user);
-    if (!next) next = await createInitialUserProfile(user);
-    applyProfile(next);
-  };
-
-  const refreshSession = async () => {
-    if (!isAuthConfigured) {
-      setUser(null);
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    return authService.subscribe(async (user) => {
+      setFirebaseUser(user);
       setProfile(null);
-      setStatus('CONFIGURATION_REQUIRED');
-      return;
-    }
-
-    setStatus('AUTHENTICATING');
-    try {
-      const nextUser = await authService.getSession();
-      setUser(nextUser);
-      setProfile(null);
-
-      if (!nextUser) {
+      if (!user) {
         setStatus('UNAUTHENTICATED');
         return;
       }
-
-      let nextProfile = await getUserProfile(nextUser);
-      if (!nextProfile) nextProfile = await createInitialUserProfile(nextUser);
-      applyProfile(nextProfile);
-    } catch {
-      setUser(null);
-      setProfile(null);
-      setStatus('UNAUTHENTICATED');
-    }
-  };
-
-  useEffect(() => {
-    void refreshSession();
+      if (!user.emailVerified) {
+        setStatus('EMAIL_VERIFICATION_REQUIRED');
+        return;
+      }
+      try {
+        const next = await getUserProfile(user.uid);
+        setProfile(next);
+        if (!next) setStatus('PROFILE_INCOMPLETE');
+        else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
+        else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
+        else setStatus('AUTHENTICATED');
+      } catch {
+        setStatus('PROFILE_INCOMPLETE');
+      }
+    });
   }, []);
 
   const value = useMemo(
-    () => ({ user, profile, status, refreshSession, refreshProfile }),
-    [user, profile, status],
+    () => ({ firebaseUser, profile, status, refreshProfile }),
+    [firebaseUser, profile, status],
   );
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

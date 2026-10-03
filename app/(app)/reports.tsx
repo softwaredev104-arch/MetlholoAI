@@ -116,7 +116,7 @@ export default function Reports() {
                   styles.bar,
                   {
                     backgroundColor: colors.primary,
-                    width: String(Math.round((count / maxCount) * 100)) + '%',
+                    width: (String(Math.round((count / maxCount) * 100)) + '%') as `${number}%`,
                   },
                 ]}
               />

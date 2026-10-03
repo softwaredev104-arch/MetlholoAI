@@ -1,0 +1,26 @@
+name: Build Expo Web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run build:web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metlholoai-web-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 3

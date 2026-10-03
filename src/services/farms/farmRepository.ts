@@ -37,6 +37,21 @@ async function sync(ownerId: string) {
 export async function listFarms(ownerId: string): Promise<Farm[]> {
   return readList<Farm>(farmsKey(ownerId));
 }
+
+export async function updateFarm(
+  ownerId: string,
+  farmId: string,
+  patch: Partial<Omit<Farm, 'id' | 'ownerId' | 'createdAt'>>,
+) {
+  const farms = await listFarms(ownerId);
+  const next = farms.map(item =>
+    item.id === farmId ? { ...item, ...patch } : item,
+  );
+  await writeList(farmsKey(ownerId), next);
+  await sync(ownerId);
+  return next.find(item => item.id === farmId) ?? null;
+}
+
 export async function createFarm(ownerId: string, input: Pick<Farm, 'name' | 'location' | 'farmType' | 'farmSizeBand' | 'latitude' | 'longitude'>) {
   const farms = await listFarms(ownerId);
   const farm: Farm = { id: id('farm'), ownerId, ...input, createdAt: new Date().toISOString() };

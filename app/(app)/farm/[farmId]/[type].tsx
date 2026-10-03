@@ -13,22 +13,22 @@ const labels: Record<FarmRecordType, string> = {
 
 export default function FarmRecords() {
   const { farmId, type } = useLocalSearchParams<{ farmId: string; type: FarmRecordType }>();
-  const { firebaseUser } = useAuth();
+  const { user } = useAuth();
   const [records, setRecords] = useState<FarmRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const label = labels[type];
 
   async function load() {
-    if (!firebaseUser || !farmId || !type) return;
-    setRecords(await listFarmRecords(firebaseUser.uid, farmId, type));
+    if (!user || !farmId || !type) return;
+    setRecords(await listFarmRecords(user.id, farmId, type));
   }
-  useEffect(() => { load(); }, [firebaseUser?.uid, farmId, type]);
+  useEffect(() => { void load(); }, [user?.id, farmId, type]);
 
   async function add() {
-    if (!firebaseUser || !farmId || !type) return;
+    if (!user || !farmId || !type) return;
     setLoading(true);
     try {
-      const record = await createFarmRecord(firebaseUser.uid, farmId, type, { name: `New ${label.slice(0, -1)}`, notes: '' });
+      const record = await createFarmRecord(user.id, farmId, type, { name: `New ${label.slice(0, -1)}`, notes: '' });
       setRecords(current => [...current, record]);
     } finally { setLoading(false); }
   }
@@ -36,7 +36,7 @@ export default function FarmRecords() {
   return (
     <AppScreen>
       <AppText variant="largeTitle">{label}</AppText>
-      <AppText style={{ opacity: 0.7 }}>Owner-scoped CRUD records for this farm.</AppText>
+      <AppText style={{ opacity: 0.7 }}>Owner-scoped local records for this farm.</AppText>
       <AppButton title={`Add ${label.slice(0, -1)}`} loading={loading} onPress={add} />
       {records.map(record => <AppCard key={record.id}><AppText variant="headline">{record.name}</AppText><AppText>{record.notes || 'No notes yet.'}</AppText></AppCard>)}
       {!records.length ? <AppText style={{ opacity: 0.6 }}>No records yet.</AppText> : null}

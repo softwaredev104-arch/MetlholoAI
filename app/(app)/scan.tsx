@@ -75,13 +75,13 @@ export default function Scan() {
   const [subject, setSubject] = useState<string>(
     params.sourceName && availableModels.some(model => model.subject === params.sourceName)
       ? params.sourceName
-      : subjects[0] ?? '',
+      : subjects.at(0) ?? '',
   );
   const subjectModels = useMemo(
     () => availableModels.filter(model => !subject || model.subject === subject),
     [availableModels, subject],
   );
-  const [modelId, setModelId] = useState<string>(subjectModels[0]?.id ?? '');
+  const [modelId, setModelId] = useState<string>(subjectModels.at(0)?.id ?? '');
   const model: IntelligenceModel | undefined =
     subjectModels.find(item => item.id === modelId) ?? subjectModels[0];
 
@@ -98,13 +98,13 @@ export default function Scan() {
       return;
     }
     if (!subjectModels.some(item => item.id === modelId)) {
-      setModelId(subjectModels[0].id);
+      setModelId(subjectModels.at(0)?.id ?? '');
     }
   }, [subject, category, subjectModels.length]);
 
   useEffect(() => {
     if (!subjects.includes(subject)) {
-      setSubject(subjects[0] ?? '');
+      setSubject(subjects.at(0) ?? '');
     }
   }, [category, subjects.join('|')]);
 

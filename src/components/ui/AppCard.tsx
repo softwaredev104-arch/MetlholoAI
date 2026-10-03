@@ -1,1 +1,47 @@
-import {PropsWithChildren} from 'react'; import {StyleSheet,View,ViewProps} from 'react-native'; import {useTheme} from '@/design/themes'; import {Radii} from '@/design/radii'; import {Shadows} from '@/design/shadows'; import {Spacing} from '@/design/spacing'; export function AppCard({children,style,...props}:PropsWithChildren<ViewProps>){const {colors}=useTheme(); return <View {...props} style={[styles.card,Shadows.card,{backgroundColor:colors.surface,borderColor:colors.border},style]}>{children}</View>;} const styles=StyleSheet.create({card:{borderWidth:StyleSheet.hairlineWidth,borderRadius:Radii.lg,padding:Spacing.lg}});
+import { PropsWithChildren } from 'react';
+import { Pressable, StyleSheet, View, ViewProps } from 'react-native';
+import { useTheme } from '@/design/themes';
+import { Radii } from '@/design/radii';
+import { Shadows } from '@/design/shadows';
+import { Spacing } from '@/design/spacing';
+
+type Props = PropsWithChildren<ViewProps & { onPress?: () => void }>;
+
+export function AppCard({ children, style, onPress, ...props }: Props) {
+  const { colors } = useTheme();
+  const baseStyle = [
+    styles.card,
+    Shadows.card,
+    { backgroundColor: colors.surface, borderColor: colors.border },
+    style,
+  ];
+
+  if (onPress) {
+    return (
+      <Pressable
+        {...props}
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [baseStyle, pressed && styles.pressed]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View {...props} style={baseStyle}>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radii.lg,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  pressed: { opacity: 0.78, transform: [{ scale: 0.995 }] },
+});

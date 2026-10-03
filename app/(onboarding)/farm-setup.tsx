@@ -86,11 +86,6 @@ export default function FarmSetup() {
       return;
     }
 
-    if (!driveConnected) {
-      setError('Connect Google Drive before finishing onboarding.');
-      return;
-    }
-
     setFinishing(true);
     setError('');
 
@@ -120,7 +115,9 @@ export default function FarmSetup() {
         onboardingCompleted: true,
       });
 
-      await syncUserProfileToDrive(firebaseUser.uid);
+      if (driveConnected) {
+        await syncUserProfileToDrive(firebaseUser.uid);
+      }
       await refreshProfile();
       router.replace('/(app)/(tabs)');
     } catch (e) {
@@ -263,7 +260,7 @@ export default function FarmSetup() {
           <View style={{ flex: 1, gap: 4 }}>
             <AppText variant="headline">Google Drive storage</AppText>
             <AppText style={{ color: colors.textSecondary }}>
-              MetlholoAI stores the profile and farm files it creates in your own Google Drive.
+              Connect Google Drive to sync the profile and farm files MetlholoAI creates. You can continue with local storage and connect Drive later from Profile.
             </AppText>
           </View>
 

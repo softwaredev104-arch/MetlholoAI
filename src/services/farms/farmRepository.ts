@@ -47,7 +47,7 @@ export async function createFarm(ownerId: string, input: Pick<Farm, 'name' | 'lo
 export async function listFarmRecords(ownerId: string, farmId: string, type: FarmRecordType): Promise<FarmRecord[]> {
   return readList<FarmRecord>(recordsKey(ownerId, farmId, type));
 }
-export async function createFarmRecord(ownerId: string, farmId: string, type: FarmRecordType, input: Omit<FarmRecord, 'id' | 'ownerId' | 'farmId' | 'type' | 'createdAt'>) {
+export async function createFarmRecord(ownerId: string, farmId: string, type: FarmRecordType, input: Omit<FarmRecord, 'id' | 'ownerId' | 'farmId' | 'type' | 'createdAt'> & { name: string }) {
   const records = await listFarmRecords(ownerId, farmId, type);
   const record: FarmRecord = { id: id('record'), ...input, ownerId, farmId, type, createdAt: new Date().toISOString() };
   await writeList(recordsKey(ownerId, farmId, type), [...records, record]);

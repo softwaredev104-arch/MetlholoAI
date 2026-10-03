@@ -41,8 +41,6 @@ jobs:
           publish_branch: web-dist
           force_orphan: true
 
-      - name: Deploy real app to Cloudflare Pages
-        run: npx wrangler@latest pages deploy dist --project-name metlholoai --branch main
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # The Cloudflare Worker preview serves the compiled web-dist branch.
+      # Direct Pages deployment can be re-enabled once account-scoped
+      # CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets are configured.

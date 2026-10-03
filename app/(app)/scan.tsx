@@ -130,7 +130,9 @@ export default function Scan() {
           });
 
     if (!result.canceled) {
-      setUri(result.assets[0].uri);
+      const asset = result.assets.at(0);
+      if (!asset) return;
+      setUri(asset.uri);
       setPrediction(null);
       setReport(null);
       setReference(null);

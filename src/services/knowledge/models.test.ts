@@ -39,6 +39,6 @@ describe('agricultural knowledge contracts', () => {
       source,
       publicationStatus: 'published',
     });
-    expect(guideline.recommendations[0].productName).toBe('Reference Product');
+    expect(guideline.recommendations[0]?.productName).toBe('Reference Product');
   });
 });

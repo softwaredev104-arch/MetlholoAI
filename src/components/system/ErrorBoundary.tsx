@@ -12,7 +12,7 @@ export class ErrorBoundary extends Component<PropsWithChildren, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (__DEV__) console.error('MetlholoAI fatal UI error', error, info);
+    console.error('MetlholoAI fatal UI error', error, info);
   }
 
   render() {
@@ -21,7 +21,10 @@ export class ErrorBoundary extends Component<PropsWithChildren, State> {
         <View style={styles.container}>
           <AppText variant="title2">MetlholoAI needs a restart</AppText>
           <AppText style={{ textAlign: 'center' }}>
-            We hit an unexpected screen error. Please restart the app and try again.
+            We hit an unexpected screen error.
+          </AppText>
+          <AppText variant="footnote" style={{ textAlign: 'center', opacity: 0.7 }}>
+            {this.state.error.message}
           </AppText>
         </View>
       );

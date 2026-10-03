@@ -14,6 +14,13 @@ import { StatusPill } from '@/components/app/ProductUI';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 
+type SettingsItem = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle?: string;
+  target: string;
+};
+
 export default function Profile() {
   const { profile } = useAuth();
   const { farm } = usePrimaryFarm();
@@ -33,13 +40,66 @@ export default function Profile() {
     }
   }
 
-  const rows = [
-    ['person-outline', 'Personal Information', profile?.displayName || 'Profile'],
-    ['leaf-outline', 'My Farm', farm ? farm.name : 'No farm configured'],
-    ['notifications-outline', 'Notifications', 'Disease, weather and market preferences'],
-    ['language-outline', 'Language', 'English'],
-    ['shield-checkmark-outline', 'Privacy & Security', 'Firebase authentication + user-owned Drive data'],
-  ] as const;
+  const accountSettings: SettingsItem[] = [
+    {
+      icon: 'person-outline',
+      title: 'Personal Information',
+      subtitle: 'Name, email, and phone number',
+      target: '/(app)/settings/personal-information',
+    },
+    {
+      icon: 'leaf-outline',
+      title: 'My Farms',
+      subtitle: farm ? farm.name : 'Manage registered farm locations',
+      target: '/(app)/settings/farms',
+    },
+    {
+      icon: 'card-outline',
+      title: 'Payment Methods',
+      subtitle: 'No payment provider connected',
+      target: '/(app)/settings/payment-methods',
+    },
+  ];
+
+  const preferences: SettingsItem[] = [
+    {
+      icon: 'notifications-outline',
+      title: 'Notifications',
+      subtitle: 'Alerts and updates',
+      target: '/(app)/settings/notifications',
+    },
+    {
+      icon: 'language-outline',
+      title: 'Language',
+      subtitle: 'English (SADC)',
+      target: '/(app)/settings/language',
+    },
+    {
+      icon: 'shield-checkmark-outline',
+      title: 'Privacy & Security',
+      subtitle: 'Authentication and your data',
+      target: '/(app)/settings/privacy-security',
+    },
+  ];
+
+  const SettingsCard = ({ item }: { item: SettingsItem }) => (
+    <AppCard onPress={() => router.push(item.target as any)}>
+      <View style={styles.row}>
+        <View style={[styles.rowIcon, { backgroundColor: colors.surfaceSecondary }]}>
+          <Ionicons name={item.icon} size={22} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppText variant="headline">{item.title}</AppText>
+          {item.subtitle ? (
+            <AppText variant="footnote" style={{ color: colors.textSecondary }}>
+              {item.subtitle}
+            </AppText>
+          ) : null}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+      </View>
+    </AppCard>
+  );
 
   return (
     <AppScreen maxWidth={900}>
@@ -58,15 +118,22 @@ export default function Profile() {
           <AppText variant="largeTitle">{profile?.displayName || 'MetlholoAI user'}</AppText>
           <AppText style={{ color: colors.textSecondary }}>{profile?.email}</AppText>
         </View>
-        <StatusPill label={(profile?.subscriptionTier || 'FREE') + ' PLAN'} tone="success" />
+        <StatusPill
+          label={(profile?.subscriptionTier || 'FREE') + ' PLAN'}
+          tone="success"
+        />
       </View>
 
       <AppCard>
         <AppText variant="title2">Account</AppText>
         <View style={styles.pills}>
           <StatusPill label={profile?.role || 'FARMER'} />
-          {profile?.primaryActivity ? <StatusPill label={profile.primaryActivity} tone="info" /> : null}
-          {farm?.farmType ? <StatusPill label={farm.farmType} tone="success" /> : null}
+          {profile?.primaryActivity ? (
+            <StatusPill label={profile.primaryActivity} tone="info" />
+          ) : null}
+          {farm?.farmType ? (
+            <StatusPill label={farm.farmType} tone="success" />
+          ) : null}
         </View>
       </AppCard>
 
@@ -95,20 +162,13 @@ export default function Profile() {
       </AppCard>
 
       <AppText variant="title2">Account Settings</AppText>
-      {rows.map(([icon, title, subtitle]) => (
-        <AppCard key={title}>
-          <View style={styles.row}>
-            <View style={[styles.rowIcon, { backgroundColor: colors.surfaceSecondary }]}>
-              <Ionicons name={icon as any} size={22} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <AppText variant="headline">{title}</AppText>
-              <AppText variant="footnote" style={{ color: colors.textSecondary }}>
-                {subtitle}
-              </AppText>
-            </View>
-          </View>
-        </AppCard>
+      {accountSettings.map(item => (
+        <SettingsCard key={item.title} item={item} />
+      ))}
+
+      <AppText variant="title2">App Preferences</AppText>
+      {preferences.map(item => (
+        <SettingsCard key={item.title} item={item} />
       ))}
 
       {profile?.role === 'ADMIN' ? (
@@ -127,7 +187,10 @@ export default function Profile() {
         onPress={() => authService.logout()}
       />
 
-      <AppText variant="caption" style={{ color: colors.textTertiary, textAlign: 'center' }}>
+      <AppText
+        variant="caption"
+        style={{ color: colors.textTertiary, textAlign: 'center' }}
+      >
         Designed & developed by Bokang Jobe · MetlholoAI
       </AppText>
     </AppScreen>

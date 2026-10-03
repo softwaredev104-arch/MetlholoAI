@@ -10,24 +10,24 @@ import { updateUserProfile } from '@/services/auth/userProfileService';
 import { Spacing } from '@/design/spacing';
 
 export default function ProfileOnboarding() {
-  const { user, profile, refreshProfile } = useAuth();
-  const [name, setName] = useState(profile?.displayName ?? user?.displayName ?? '');
+  const { firebaseUser, profile, refreshProfile } = useAuth();
+  const [name, setName] = useState(profile?.displayName ?? firebaseUser?.displayName ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function next() {
-    if (!user || name.trim().length < 2) {
+    if (!firebaseUser || name.trim().length < 2) {
       setError('Enter your name so we can personalize MetlholoAI.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      await updateUserProfile(user.id, { displayName: name.trim() });
+      await updateUserProfile(firebaseUser.uid, { displayName: name.trim() });
       await refreshProfile();
       router.replace('/(onboarding)/farm-setup');
     } catch {
-      setError('We could not save your profile. Try again.');
+      setError('We could not save your profile. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function ProfileOnboarding() {
     <AppScreen>
       <View style={styles.header}>
         <AppText variant="largeTitle">Let’s set up your profile</AppText>
-        <AppText>Your Google account is connected. We’ll keep onboarding short.</AppText>
+        <AppText>We’ll keep onboarding short and collect the rest progressively.</AppText>
       </View>
       <AppTextField label="Your name" value={name} onChangeText={setName} autoComplete="name" />
       {error ? <AppText style={{ color: '#B33A3A' }}>{error}</AppText> : null}

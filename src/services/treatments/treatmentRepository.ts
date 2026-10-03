@@ -6,8 +6,13 @@ export type TreatmentRecord = {
   ownerId: string;
   farmId: string;
   caseId?: string;
+  subjectType?: 'animal' | 'crop' | 'general';
+  subjectId?: string;
+  subjectName?: string;
   animalId?: string;
   animalName?: string;
+  cropId?: string;
+  cropName?: string;
   treatmentName: string;
   dosage?: string;
   frequency?: string;

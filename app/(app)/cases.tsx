@@ -88,7 +88,10 @@ export default function Cases() {
               <View style={{ flex: 1 }}>
                 <AppText variant="title3">{item.disease}</AppText>
                 <AppText style={{ color: colors.textSecondary }}>
-                  {[item.animalName, item.village || item.location]
+                  {[
+                    item.subjectName ?? item.animalName ?? item.cropName,
+                    item.village || item.location,
+                  ]
                     .filter(Boolean)
                     .join(' · ') || 'Farm case'}
                 </AppText>

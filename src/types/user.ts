@@ -17,6 +17,7 @@ export type SubscriptionTier = (typeof SUBSCRIPTION_TIERS)[number];
 export type AccountStatus = 'active' | 'suspended';
 export type PrimaryActivity = 'CROPS' | 'LIVESTOCK' | 'MIXED' | 'AGRIBUSINESS' | 'PROFESSIONAL';
 export type FarmType = 'CROPS' | 'LIVESTOCK' | 'MIXED';
+export type FarmSizeBand = 'SMALL' | 'MEDIUM' | 'LARGE';
 
 export interface UserProfile {
   uid: string;
@@ -31,6 +32,12 @@ export interface UserProfile {
   farmName?: string;
   farmType?: FarmType;
   locationLabel?: string;
+  farmSizeBand?: FarmSizeBand;
+  alertPreferences?: {
+    outbreaks: boolean;
+    weather: boolean;
+    market: boolean;
+  };
   createdAt?: unknown;
   updatedAt?: unknown;
 }

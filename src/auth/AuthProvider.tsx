@@ -1,7 +1,7 @@
 import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { authService } from '@/services/auth/authService';
-import { getUserProfile } from '@/services/auth/userProfileService';
+import { createInitialUserProfile, getUserProfile } from '@/services/auth/userProfileService';
 import { isFirebaseConfigured } from '@/config/env';
 import type { UserProfile } from '@/types/user';
 
@@ -22,6 +22,18 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function ensureLocalProfile(user: User) {
+  const existing = await getUserProfile(user.uid);
+  if (existing) return existing;
+  return createInitialUserProfile({
+    uid: user.uid,
+    displayName: user.displayName ?? user.email?.split('@')[0] ?? 'Farmer',
+    email: user.email ?? '',
+    photoURL: user.photoURL,
+    role: 'FARMER',
+  });
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -29,19 +41,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     isFirebaseConfigured ? 'AUTHENTICATING' : 'UNAUTHENTICATED',
   );
 
-  const refreshProfile = async () => {
-    if (!firebaseUser) return;
-    const next = await getUserProfile(firebaseUser.uid);
+  const applyProfile = (next: UserProfile) => {
     setProfile(next);
-    if (!next) setStatus('PROFILE_INCOMPLETE');
-    else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
+    if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
     else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
     else setStatus('AUTHENTICATED');
   };
 
+  const refreshProfile = async () => {
+    if (!firebaseUser) return;
+    applyProfile(await ensureLocalProfile(firebaseUser));
+  };
+
   useEffect(() => {
     if (!isFirebaseConfigured) return;
-    return authService.subscribe(async (user) => {
+    return authService.subscribe(async user => {
       setFirebaseUser(user);
       setProfile(null);
       if (!user) {
@@ -53,12 +67,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
       try {
-        const next = await getUserProfile(user.uid);
-        setProfile(next);
-        if (!next) setStatus('PROFILE_INCOMPLETE');
-        else if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
-        else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
-        else setStatus('AUTHENTICATED');
+        applyProfile(await ensureLocalProfile(user));
       } catch {
         setStatus('PROFILE_INCOMPLETE');
       }
@@ -69,6 +78,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({ firebaseUser, profile, status, refreshProfile }),
     [firebaseUser, profile, status],
   );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

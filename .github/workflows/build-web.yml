@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: metlholoai-web-dist
+  cancel-in-progress: true
+
 jobs:
   build-web:
     runs-on: ubuntu-latest

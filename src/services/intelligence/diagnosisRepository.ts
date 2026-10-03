@@ -72,7 +72,7 @@ export async function listDiagnoses(ownerId: string, farmId: string) {
 
 export function predictionOutcome(
   prediction: PredictionResult,
-  model: IntelligenceModel,
+  _model: IntelligenceModel,
 ) {
   return String(
     prediction.disease ??

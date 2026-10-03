@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
@@ -5,7 +6,14 @@ import { useAuth } from '@/auth/AuthProvider';
 import { authService } from '@/services/auth/authService';
 
 export default function Profile() {
-  const { profile } = useAuth();
+  const { profile, refreshSession } = useAuth();
+
+  async function signOut() {
+    await authService.logout();
+    await refreshSession();
+    router.replace('/');
+  }
+
   return (
     <AppScreen>
       <AppText variant="largeTitle">Profile</AppText>
@@ -13,7 +21,7 @@ export default function Profile() {
       <AppText>{profile?.email}</AppText>
       <AppText>Role: {profile?.role}</AppText>
       <AppText>Plan: {profile?.subscriptionTier}</AppText>
-      <AppButton title="Sign Out" variant="secondary" onPress={() => authService.logout()} />
+      <AppButton title="Sign Out" variant="secondary" onPress={signOut} />
     </AppScreen>
   );
 }

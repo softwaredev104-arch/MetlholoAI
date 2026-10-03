@@ -3,7 +3,7 @@ import { driveJsonStore } from '@/services/drive/driveJsonStore';
 
 export type FarmRecordType = 'animals' | 'crops' | 'healthRecords' | 'tasks' | 'feedingPlans' | 'marketplace';
 
-export type Farm = { id: string; ownerId: string; name: string; location?: string; latitude?: number; longitude?: number; createdAt: string; };
+export type Farm = { id: string; ownerId: string; name: string; location?: string; farmType?: 'CROPS' | 'LIVESTOCK' | 'MIXED'; latitude?: number; longitude?: number; createdAt: string; };
 export type FarmRecord = { id: string; ownerId: string; farmId: string; type: FarmRecordType; name: string; notes?: string; status?: string; quantity?: number; unit?: string; createdAt: string; [key: string]: unknown; };
 
 const farmsKey = (ownerId: string) => `metlholoai.farms.${ownerId}`;
@@ -37,7 +37,7 @@ async function sync(ownerId: string) {
 export async function listFarms(ownerId: string): Promise<Farm[]> {
   return readList<Farm>(farmsKey(ownerId));
 }
-export async function createFarm(ownerId: string, input: Pick<Farm, 'name' | 'location' | 'latitude' | 'longitude'>) {
+export async function createFarm(ownerId: string, input: Pick<Farm, 'name' | 'location' | 'farmType' | 'latitude' | 'longitude'>) {
   const farms = await listFarms(ownerId);
   const farm: Farm = { id: id('farm'), ownerId, ...input, createdAt: new Date().toISOString() };
   await writeList(farmsKey(ownerId), [...farms, farm]);

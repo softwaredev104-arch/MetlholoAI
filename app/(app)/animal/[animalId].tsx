@@ -109,7 +109,18 @@ export default function AnimalDetail() {
           }
         />
         <AppButton
+          title="Create Case Record"
+          icon="document-text-outline"
+          onPress={() =>
+            router.push({
+              pathname: '/(app)/case/new' as any,
+              params: { animalId: animal.id, animalName: animal.name },
+            })
+          }
+        />
+        <AppButton
           title="Add Health Record"
+          variant="secondary"
           icon="medkit-outline"
           onPress={() =>
             router.push({

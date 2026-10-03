@@ -17,8 +17,13 @@ const frequencies = ['Once', '1x daily', '2x daily', '3x daily', 'Weekly'];
 export default function NewTreatment() {
   const params = useLocalSearchParams<{
     caseId?: string;
+    subjectType?: 'animal' | 'crop' | 'general';
+    subjectId?: string;
+    subjectName?: string;
     animalId?: string;
     animalName?: string;
+    cropId?: string;
+    cropName?: string;
   }>();
   const { user, farm } = usePrimaryFarm();
   const { colors } = useTheme();
@@ -35,6 +40,12 @@ export default function NewTreatment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const linkedName =
+    params.subjectName ?? params.animalName ?? params.cropName ?? '';
+  const linkedType =
+    params.subjectType ??
+    (params.animalId ? 'animal' : params.cropId ? 'crop' : 'general');
+
   async function save() {
     if (!user || !farm) return;
     if (name.trim().length < 2) {
@@ -46,8 +57,17 @@ export default function NewTreatment() {
     try {
       await createTreatment(user.uid, farm.id, {
         caseId: params.caseId || undefined,
+        subjectType: linkedType,
+        subjectId:
+          params.subjectId ??
+          params.animalId ??
+          params.cropId ??
+          undefined,
+        subjectName: linkedName || undefined,
         animalId: params.animalId || undefined,
         animalName: params.animalName || undefined,
+        cropId: params.cropId || undefined,
+        cropName: params.cropName || undefined,
         treatmentName: name.trim(),
         dosage: dosage.trim() || undefined,
         frequency,
@@ -76,8 +96,8 @@ export default function NewTreatment() {
   return (
     <AppScreen maxWidth={780}>
       <AppText variant="largeTitle">New Treatment</AppText>
-      {params.animalName ? (
-        <StatusPill label={'Linked to ' + params.animalName} tone="info" />
+      {linkedName ? (
+        <StatusPill label={'Linked to ' + linkedName} tone="info" />
       ) : null}
 
       <AppTextField

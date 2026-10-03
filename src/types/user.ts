@@ -33,6 +33,8 @@ export interface UserProfile {
   farmType?: FarmType;
   locationLabel?: string;
   farmSizeBand?: FarmSizeBand;
+  phoneNumber?: string;
+  language?: 'en-SADC';
   alertPreferences?: {
     outbreaks: boolean;
     weather: boolean;

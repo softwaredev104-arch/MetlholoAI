@@ -1,134 +1,335 @@
 # MetlholoAI
 
-Developer: Bokang Jobe
-Repository: https://github.com/loetolex/MetlholoAI
+**Developer:** Bokang Jobe  
+**Repository:** https://github.com/softwaredev104-arch/MetlholoAI
 
-MetlholoAI is a production-oriented agricultural intelligence platform for Botswana, built as a native-first React Native application with Expo and Firebase.
+MetlholoAI is an agricultural intelligence and farm operations application for Botswana. It is built with Expo + React Native for mobile and responsive web, using the supplied MetlholoAI design markdowns as the product/UI specification.
 
 ## Current version
 
-0.1.0 — Foundation / Authentication & Navigation
+**0.1.0 — working markdown-driven product implementation**
 
-Implemented:
-- Expo SDK 57 + Expo Router
-- TypeScript strict foundation
-- Centralized light/dark design tokens
-- Apple-inspired typography and spacing system
-- Reusable accessible UI primitives
-- Firebase modular SDK initialization
-- Persistent Firebase Authentication state
-- Email/password sign-in, sign-up and password reset
-- Central AuthProvider and explicit auth state machine
-- Central permission model
-- Central subscription feature-access model
-- Protected, public and onboarding route boundaries
-- Error boundary
-- TanStack Query server-state foundation
-- Zustand client-state foundation
-- Initial onboarding flow
-- First authenticated five-tab workspace
-- Deny-by-default Firestore and Storage rules
-- Jest + React Native Testing Library foundation
+The repository is no longer only an authentication/navigation foundation. The current app includes the main farmer workflows represented in the design exports and binds them to real local/Google Drive-backed state where the architecture supports it.
+
+## Implemented product areas
+
+### Authentication and onboarding
+- Welcome / Get Started
+- Email + password registration and sign-in
+- Google sign-in on the current web implementation
+- Email verification
+- Password reset
+- Role and primary-activity onboarding
+- Farm setup
+- Farm type and size
+- Botswana location search
+- Notification preferences
+- Optional Google Drive connection
+- Protected authenticated routes
+
+Google Drive is **not required** to complete onboarding. Mobile users can continue with local state and connect a Drive adapter later.
+
+### Main navigation
+The authenticated five-destination product navigation follows the supplied farm design:
+
+**Home → Farm → Scan → Animals → Profile**
+
+The center Scan action remains visually prominent.
+
+### Home
+- Signed-in user greeting
+- Active farm and location
+- Current weather from saved farm coordinates
+- Humidity, wind and rain probability
+- Farm record counts
+- Disease Detection shortcuts
+- Crop, pest, livestock, treatment, market and report entry points
+- Action/alert summary
+
+### Farm Dashboard
+- Animals
+- Fields
+- Pending tasks
+- Farm alerts
+- Livestock health summary
+- Field health summary
+- Priority tasks
+- Open case records
+- Farm workspace modules
+- Farm profile / weather mapping state
+
+### Animals
+- Search and species filters
+- Animal health status
+- Add animal
+- Edit animal
+- Animal details
+- Tag / breed / age / weight / gender / purpose
+- Vaccinations and checkup information
+- Link an animal to:
+  - case records
+  - health records
+  - feeding plans
+  - AI scan workflow
+
+### Crops
+- Search and crop grouping
+- Add crop field
+- Edit crop field
+- Field details
+- Crop type / variety
+- hectares
+- plot/location
+- growth stage
+- field health
+- irrigation
+- soil
+- planting / harvest / inspection dates
+- Link a crop to:
+  - case records
+  - AI scan workflow
+
+### Health Records
+- Scheduled / overdue / completed states
+- Vaccination
+- Treatment
+- Checkup
+- Surgery
+- Animal linking
+- dates / due dates
+- vet or officer
+- cost
+
+### Case Records
+- Animal, crop or general farm cases
+- Disease/problem
+- Severity
+- District / village / location
+- Notes
+- Photo attachments
+- Open / monitoring / resolved state
+- Linked treatment records
+
+### Treatments
+- Linked case record
+- Animal or crop subject
+- Treatment name
+- Dosage
+- Frequency
+- Method
+- Start and end dates
+- Follow-up flag
+- Vet-notification preference
+- Cost
+- Notes
+
+The application records a vet-notification preference but does not claim to send a veterinary message until a real messaging provider is connected.
+
+### Farm Tasks
+- Categories
+- priorities
+- due dates
+- related farm object
+- completion state
+- progress summary
+
+### Feeding Plans
+- Link to registered animal
+- feed type
+- amount
+- frequency
+- supplement
+- daily cost
+- notes
+
+### AI Scan and Diagnosis
+- Crops and Livestock model categories
+- Soil and Pest product categories represented without fabricating unavailable model services
+- subject/model selection
+- capture guidance
+- camera / image library
+- multipart prediction request
+- report generation request
+- saved diagnosis history
+- confidence
+- diagnosis-reference bridge
+
+AI service base URLs are environment-configured. MetlholoAI does not guess production model server URLs.
+
+### Reports & Analytics
+- Overview
+- Crops
+- Livestock
+- Pests
+- Cases
+- diagnosis counts
+- average confidence
+- farm record coverage
+- top findings
+- six-month case trend view
+- real record-derived distributions
+
+### Market Prices
+The design flow is implemented, but the current values are explicitly marked as **reference data**. They are not presented as live Botswana prices until a verified market source is connected.
+
+### Alerts
+- farm tasks
+- health follow-ups
+- current weather
+- Drive-session state
+- notification categories
+
+No disease outbreak is fabricated. Live outbreak alerts remain inactive until a verified veterinary/public-health feed is connected.
+
+### Profile and Settings
+The design's Account Settings and App Preferences are now working routes:
+
+- Personal Information
+  - name
+  - sign-in email display
+  - phone number
+- My Farms
+  - multiple registered farms
+  - edit farm
+  - add farm
+  - set primary farm
+- Payment Methods
+  - truthful unconfigured state until a payment provider is connected
+- Notifications
+- Language
+  - English (SADC) currently verified
+- Privacy & Security
+  - Firebase authentication state
+  - password reset
+  - Google Drive connect/disconnect
+  - data-boundary explanation
+- Sign out
+- Admin console for ADMIN accounts
+
+## Data architecture
+
+### Firebase
+Firebase is currently used for **Authentication**.
+
+The active farm/product data path does **not** use Firestore as the farm-record database.
+
+### Local state
+User-owned farm records are stored locally with AsyncStorage:
+- profile
+- farms
+- animals
+- crops
+- health records
+- tasks
+- feeding plans
+- case records
+- treatments
+- saved diagnoses
+- marketplace records
+
+### Google Drive
+When the user grants Google Drive permission, MetlholoAI synchronizes user-owned JSON files to the user's own Drive.
+
+Current web integration uses Google Identity Services with the `drive.file` scope.
+
+Native Drive authorization still needs a native provider adapter. Because of this, Drive is optional during onboarding and the app remains usable with local storage.
+
+## External services
+
+### Weather
+Current weather uses Open-Meteo with saved farm latitude/longitude.
+
+### Location search
+Farm location search uses Open-Meteo geocoding restricted to Botswana.
+
+### Agricultural intelligence
+Configure the deployed model services with:
+
+```env
+EXPO_PUBLIC_AI_MAIZE_BASE_URL=
+EXPO_PUBLIC_AI_CATTLE_BASE_URL=
+EXPO_PUBLIC_AI_MAIZE_BEE_BASE_URL=
+EXPO_PUBLIC_AI_GRAPE_BASE_URL=
+EXPO_PUBLIC_AI_TOMATO_BASE_URL=
+EXPO_PUBLIC_AI_SPINACH_BASE_URL=
+EXPO_PUBLIC_AI_PEPPER_BASE_URL=
+EXPO_PUBLIC_AI_POTATOES_BASE_URL=
+EXPO_PUBLIC_AI_POULTRY_BASE_URL=
+```
+
+Without a configured base URL, that model service is treated as unavailable rather than returning fake results.
 
 ## Setup
 
-Expo SDK 57 targets React Native 0.86. The current Expo SDK documentation lists Node.js 22.13.x as the minimum for SDK 57.
+Expo SDK 57 / React Native 0.86 expects a current Node 22 environment.
 
-1. Install dependencies: npm install
-2. Create local environment: cp .env.example .env
-3. Add the Firebase client configuration values to .env.
-4. Start: npm start
-5. Verify: npm run typecheck && npm test
+```bash
+npm install --legacy-peer-deps
+cp .env.example .env
+npm run typecheck
+npm run lint
+npm run test:ci
+npm run web
+```
 
-Firebase's modular JavaScript SDK is used on the client, with React Native authentication persistence configured through AsyncStorage.
-
-## Security boundary
-
-The React Native bundle is an untrusted client. Never add Firebase Admin credentials, service-account private keys, Gemini/OpenAI API keys, or other server secrets to EXPO_PUBLIC_* variables.
-
-The initial Firestore rules allow users to access only their own user document and prevent client-side changes to role, subscriptionTier, or status. All other collections are deny-by-default until their ownership rules are implemented.
-
-## First working flow
-
-Launch → Authentication → Sign In / Create Account → Firebase Authentication → Email verification → Profile check → Onboarding → Protected five-tab workspace
-
-## Planned implementation sequence
-
-1. Foundation / authentication / navigation — current
-2. Profile + real farm creation and ownership
-3. Dashboard + weather + alerts + intelligence
-4. Crop intelligence + disease/pest detection + AI reports
-5. Livestock + poultry + fish + health + feed
-6. Inventory + income + expenses + analytics
-7. Subscriptions + notifications + offline support
-8. Production hardening: security, accessibility, performance, crash handling and App Store configuration
+Add the Firebase public client configuration to `.env`. Configure Google Drive and intelligence service URLs only for the integrations you are actually enabling.
 
 ## Verification status
 
-- Repository foundation: IMPLEMENTED
-- Firebase rules: IMPLEMENTED
-- Local dependency installation: NOT VERIFIED
-- TypeScript compilation: NOT VERIFIED
-- Jest execution: NOT VERIFIED
-- Firebase authentication against a real project: NOT VERIFIED
-- iOS simulator/device build: NOT VERIFIED
-- Google/Apple sign-in: NOT IMPLEMENTED YET — provider adapters belong in the authentication phase after the email flow is verified
+Verified in GitHub Actions on the current implementation:
 
-## Current implementation phase
+- TypeScript strict compilation: **PASS**
+- ESLint: **PASS**
+- Jest test suite: **PASS**
+- Expo web export: **PASS**
+- Compiled `web-dist` branch publication: **PASS**
 
-### Phase 1 — Agricultural intelligence experience
-- Five-tab mobile workspace: Home, Farm, Scan, Dashboard, Profile.
-- Central circular Scan action.
-- Crops/Livestock intelligence explorer with reusable cards and model tray.
-- Model-specific capture guidance with acceptable/unacceptable guidance and training-image placeholders.
-- Multipart image upload to the existing split-service `predict` contracts.
-- Report generation adapter for the existing report endpoints.
-- Service base URLs are environment-configured; deployed Vercel URLs are not guessed.
+Not yet claimed as verified:
 
-### Phase 2 — Farm data foundation
-- Owner-scoped farms in Firestore.
-- CRUD foundation for animals, crops, health records, farm tasks, feeding plans and marketplace records.
-- Firestore ownership rules for farms and nested farm records.
+- iOS physical device build/runtime
+- Android physical device build/runtime
+- native Google sign-in
+- native Google Drive authorization
+- every deployed AI model endpoint against production
+- verified live Botswana market-price provider
+- verified disease-outbreak provider
+- payment processing
 
-### Phase 3 — Home + live farm context
-- Farm-location coordinates, weather, alerts and shortcut personalization.
-- Open-Meteo is the planned weather provider; its forecast API accepts latitude/longitude and exposes current/hourly weather variables. citeturn2search1
+## Deployment flow
 
-### Phase 4 — Diagnosis persistence and exports
-- Save prediction/report records to the user's farm.
-- ≥95% confidence alert escalation.
-- Farm-owner naming from the selected farm.
-- PDF and PowerPoint export feedback/dialog flow.
+The web build workflow:
 
-### Phase 5 — Analytics + marketplace
-- Dynamic crop/livestock analytics for health, feeding, yield and tasks.
-- Storefront CRUD sourced from farm animals/crops plus standalone marketplace listings.
+1. installs dependencies
+2. runs Expo compatibility repair
+3. exports the responsive web app
+4. uploads the build artifact
+5. publishes the compiled app to the `web-dist` branch
 
-### Phase 6 — Hardening
-- Native Firebase files, dependency lock refresh, local Android/iOS builds, endpoint integration tests, authorization adversarial tests and mobile parity verification.
+The existing Cloudflare Worker preview can serve the compiled `web-dist` branch. Direct Cloudflare Pages deployment is intentionally not part of the required CI path until account-scoped Cloudflare deployment secrets are configured.
 
-## Agricultural Knowledge Layer
+## Product integrity rules
 
-The agricultural knowledge layer separates validated reference knowledge from farmer-owned marketplace data.
+MetlholoAI must not:
+- invent disease outbreaks
+- present design-reference prices as live market data
+- claim a model endpoint is working when its service URL is not configured
+- pretend a vet notification was sent when no provider is connected
+- silently move user-owned farm records back into Firestore
+- block mobile onboarding because Drive authorization is web-only
 
-### Reference collections
-- `agriculturalCatalog` — normalized fertilizers, agrochemicals, feed, veterinary products, vaccines and seeds.
-- `cropGuidelines` — structured crop/problem recommendations with provenance.
-- `marketPrices` — BAMB producer/contract price references.
-- Published reference records are readable; ingestion/admin writes require the Firebase `admin` claim.
+These rules are enforced in the current UI by explicit unavailable/reference states.
 
-### Farmer-owned marketplace
-- `marketplaceListings` is separate from the reference catalog.
-- A listing may optionally point to a `catalogProductId`.
-- Ownership is enforced by Firebase rules; published listings can be discovered while owners retain mutation rights.
+## Next runtime phase
 
-### Diagnosis knowledge bridge
-`resolveDiagnosisReference()` maps an AI prediction to published guidelines and relevant catalog inputs. It does not prescribe treatment or create autonomous veterinary decisions.
+The codebase is now ready for runtime/device verification rather than another broad UI rewrite:
 
-### Notebook ingestion contract
-The uploaded BAMB ingestion notebook is treated as an ingestion/research pipeline. Its raw extraction remains outside the mobile UI; normalized records should move through:
-
-`RAW → EXTRACTED → NORMALIZED → VALIDATED → PUBLISHED`
-
-Every published knowledge record carries source/provenance metadata and extraction confidence.
-
+1. first-user registration and onboarding on responsive web
+2. farm creation/edit/primary-farm switching
+3. Animals → Case → Treatment workflow
+4. Crops → Case / Scan workflow
+5. Health / Tasks / Feeding persistence
+6. weather and location mapping
+7. Google Drive web sync
+8. configured AI endpoint-by-endpoint prediction tests
+9. iOS/Android native builds and device testing
+10. Cloudflare preview smoke test after each compiled `web-dist` publish

@@ -1,10 +1,10 @@
 import { Stack } from 'expo-router';
-import { ProtectedRoute } from '@/navigation/RouteGuards';
+import { OnboardingRoute } from '@/navigation/RouteGuards';
 
 export default function OnboardingLayout() {
   return (
-    <ProtectedRoute>
+    <OnboardingRoute>
       <Stack screenOptions={{ headerShown: false }} />
-    </ProtectedRoute>
+    </OnboardingRoute>
   );
 }

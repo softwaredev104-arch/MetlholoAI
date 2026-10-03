@@ -84,6 +84,16 @@ export default function CropDetail() {
 
       <View style={styles.actions}>
         <AppButton
+          title="Create Case Record"
+          icon="document-text-outline"
+          onPress={() =>
+            router.push({
+              pathname: '/(app)/case/new' as any,
+              params: { cropId: field.id, cropName: field.name },
+            })
+          }
+        />
+        <AppButton
           title="Edit Crop Details"
           variant="secondary"
           icon="create-outline"

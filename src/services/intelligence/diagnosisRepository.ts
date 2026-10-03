@@ -1,5 +1,5 @@
-import { addDoc, collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { getFirestoreDb } from '@/services/firebase/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { driveJsonStore } from '@/services/drive/driveJsonStore';
 import type { PredictionResult } from '@/services/intelligence/client';
 import type { IntelligenceModel } from '@/services/intelligence/catalog';
 
@@ -20,31 +20,65 @@ export type DiagnosisRecord = {
   createdAt: string;
 };
 
-export async function createDiagnosis(input: Omit<DiagnosisRecord, 'id' | 'createdAt'>) {
-  const createdAt = new Date().toISOString();
-  const ref = await addDoc(collection(getFirestoreDb(), 'farms', input.farmId, 'diagnostics'), {
+const key = (ownerId: string, farmId: string) =>
+  'metlholoai.diagnoses.' + ownerId + '.' + farmId;
+
+async function read(ownerId: string, farmId: string) {
+  const raw = await AsyncStorage.getItem(key(ownerId, farmId));
+  if (!raw) return [] as DiagnosisRecord[];
+  try {
+    return JSON.parse(raw) as DiagnosisRecord[];
+  } catch {
+    return [] as DiagnosisRecord[];
+  }
+}
+
+async function persist(
+  ownerId: string,
+  farmId: string,
+  records: DiagnosisRecord[],
+) {
+  await AsyncStorage.setItem(key(ownerId, farmId), JSON.stringify(records));
+  if (driveJsonStore.isConnected()) {
+    await driveJsonStore.writeJson('diagnoses.json', {
+      ownerId,
+      farmId,
+      records,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+}
+
+export async function createDiagnosis(
+  input: Omit<DiagnosisRecord, 'id' | 'createdAt'>,
+) {
+  const records = await read(input.ownerId, input.farmId);
+  const record: DiagnosisRecord = {
     ...input,
-    createdAt,
-  });
-  return { ...input, id: ref.id, createdAt } as DiagnosisRecord;
+    id:
+      'diagnosis_' +
+      Date.now() +
+      '_' +
+      Math.random().toString(36).slice(2, 8),
+    createdAt: new Date().toISOString(),
+  };
+  await persist(input.ownerId, input.farmId, [record, ...records]);
+  return record;
 }
 
 export async function listDiagnoses(ownerId: string, farmId: string) {
-  const snapshot = await getDocs(query(
-    collection(getFirestoreDb(), 'farms', farmId, 'diagnostics'),
-    where('ownerId', '==', ownerId),
-    orderBy('createdAt', 'desc'),
-  ));
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DiagnosisRecord[];
+  return read(ownerId, farmId);
 }
 
-export function predictionOutcome(prediction: PredictionResult, model: IntelligenceModel) {
-  const raw = String(prediction.disease ?? prediction.prediction ?? prediction.class ?? prediction.label ?? 'Unknown').trim();
-  if (model.id === 'cattle-health-classifier') {
-    const normalized = raw.toLowerCase().replace(/[_-]+/g, ' ');
-    if (normalized.includes('lumpy')) return 'Lumpy Skin Disease';
-    if (normalized.includes('foot') && normalized.includes('mouth')) return 'Foot and Mouth Disease';
-    if (normalized === 'healthy' || normalized.includes('normal')) return 'Healthy';
-  }
-  return raw;
+export function predictionOutcome(
+  prediction: PredictionResult,
+  model: IntelligenceModel,
+) {
+  return String(
+    prediction.disease ??
+      prediction.prediction ??
+      prediction.class ??
+      prediction.label ??
+      'Unknown',
+  ).trim();
 }

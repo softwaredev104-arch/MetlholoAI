@@ -5,7 +5,8 @@ import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
 import { LocationPicker } from '@/components/ui/LocationPicker';
 import { ChoiceChip } from '@/components/app/ProductUI';
-import type { Farm, FarmType, FarmSizeBand } from '@/services/farms/farmRepository';
+import type { Farm } from '@/services/farms/farmRepository';
+import type { FarmType, FarmSizeBand } from '@/types/user';
 import { Spacing } from '@/design/spacing';
 import { useTheme } from '@/design/themes';
 

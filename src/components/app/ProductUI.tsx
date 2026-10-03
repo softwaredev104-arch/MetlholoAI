@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -20,7 +20,7 @@ export function SectionHeader({
 }: {
   title: string;
   subtitle?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) {
   const { colors } = useTheme();
   return (
@@ -156,7 +156,7 @@ export function ResponsiveGrid({
         <View
           key={index}
           style={{
-            width: columns === 1 ? '100%' : String(Math.floor(100 / columns) - 1) + '%',
+            width: (columns === 1 ? '100%' : String(Math.floor(100 / columns) - 1) + '%') as `${number}%`,
             minWidth: Math.min(minCardWidth, width - 40),
             flexGrow: 1,
           }}

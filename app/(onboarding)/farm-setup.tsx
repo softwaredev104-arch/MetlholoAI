@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
+import { AppTextField } from '@/components/ui/AppTextField';
 import { LocationPicker } from '@/components/ui/LocationPicker';
 import { useAuth } from '@/auth/AuthProvider';
 import { driveAuthService } from '@/services/drive/driveAuthService';
@@ -184,19 +185,6 @@ export default function FarmSetup() {
           />
         </View>
 
-        <View style={styles.fieldBlock}>
-          <AppText variant="subheadline" style={{ color: colors.textSecondary }}>
-            Farm or operation name
-          </AppText>
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.textLikeField, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => {}}
-          >
-            <AppText>{farmName || 'Enter a farm name in the field below'}</AppText>
-          </Pressable>
-        </View>
-
         <View style={styles.section}>
           <AppText variant="headline">What do you produce?</AppText>
           <View style={styles.options}>
@@ -242,25 +230,12 @@ export default function FarmSetup() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <AppText variant="headline">Farm name</AppText>
-          <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <input
-              value={farmName}
-              onChange={event => setFarmName(event.target.value)}
-              placeholder="e.g. Ditlhong Farm"
-              style={{
-                width: '100%',
-                border: 'none',
-                outline: 'none',
-                font: 'inherit',
-                background: 'transparent',
-                color: 'inherit',
-                padding: 0,
-              }}
-            />
-          </View>
-        </View>
+        <AppTextField
+          label="Farm or operation name"
+          value={farmName}
+          onChangeText={setFarmName}
+          placeholder="e.g. Ditlhong Farm"
+        />
 
         <View style={styles.section}>
           <AppText variant="headline">Notifications</AppText>
@@ -328,7 +303,6 @@ const styles = StyleSheet.create({
   },
   header: { gap: Spacing.sm },
   section: { gap: Spacing.md },
-  fieldBlock: { gap: Spacing.sm },
   options: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -354,19 +328,5 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: Spacing.lg,
     gap: Spacing.md,
-  },
-  textLikeField: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    justifyContent: 'center',
-  },
-  inputWrap: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    justifyContent: 'center',
   },
 });

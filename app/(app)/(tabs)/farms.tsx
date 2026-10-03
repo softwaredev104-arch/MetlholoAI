@@ -19,21 +19,21 @@ const actions = [
 ] as const;
 
 export default function Farms() {
-  const { firebaseUser } = useAuth();
+  const { user } = useAuth();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    if (!firebaseUser) return;
+    if (!user) return;
     setLoading(true);
-    try { setFarms(await listFarms(firebaseUser.uid)); } finally { setLoading(false); }
+    try { setFarms(await listFarms(user.id)); } finally { setLoading(false); }
   }
 
-  useEffect(() => { load(); }, [firebaseUser?.uid]);
+  useEffect(() => { void load(); }, [user?.id]);
 
   async function addFarm() {
-    if (!firebaseUser) return;
-    const farm = await createFarm(firebaseUser.uid, { name: `${firebaseUser.displayName ?? 'My'} Farm` });
+    if (!user) return;
+    const farm = await createFarm(user.id, { name: `${user.displayName || 'My'} Farm` });
     setFarms(current => [...current, farm]);
   }
 

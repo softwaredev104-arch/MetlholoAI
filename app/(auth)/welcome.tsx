@@ -18,9 +18,9 @@ export default function Welcome() {
           <View style={[styles.mark, { backgroundColor: colors.primarySubtle }]}>
             <AppText variant="title1" style={{ color: colors.primary }}>M</AppText>
           </View>
-          <AppText variant="largeTitle">Agricultural intelligence, built for Botswana.</AppText>
+          <AppText variant="largeTitle">Detect. Protect. Grow.</AppText>
           <AppText variant="body" style={{ color: colors.textSecondary }}>
-            MetlholoAI helps farmers and agricultural professionals understand what needs attention and decide what to do next.
+            Agricultural intelligence for Botswana — diagnose crops and livestock, manage farm records, track health and act on weather and farm signals.
           </AppText>
         </View>
 

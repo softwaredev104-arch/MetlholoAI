@@ -38,6 +38,20 @@ export async function listFarms(ownerId: string): Promise<Farm[]> {
   return readList<Farm>(farmsKey(ownerId));
 }
 
+export async function setPrimaryFarm(ownerId: string, farmId: string) {
+  const farms = await listFarms(ownerId);
+  const selected = farms.find(item => item.id === farmId);
+  if (!selected) return null;
+
+  const next = [
+    selected,
+    ...farms.filter(item => item.id !== farmId),
+  ];
+  await writeList(farmsKey(ownerId), next);
+  await sync(ownerId);
+  return selected;
+}
+
 export async function updateFarm(
   ownerId: string,
   farmId: string,

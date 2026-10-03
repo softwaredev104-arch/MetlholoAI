@@ -20,6 +20,20 @@ const MARKET_PRICES: MarketPrice[] = [
     },
   },
   {
+    id: 'dap-market-reference',
+    commodity: 'DAP Fertilizer (50 kg)',
+    perBagPrice: 680,
+    currency: 'BWP',
+    priceType: 'other',
+    country: 'Botswana',
+    publicationStatus: 'published',
+    source: {
+      source: 'MetlholoAI design reference',
+      country: 'Botswana',
+      confidence: 'low',
+    },
+  },
+  {
     id: 'cattle-market-reference',
     commodity: 'Cattle',
     perBagPrice: 8500,

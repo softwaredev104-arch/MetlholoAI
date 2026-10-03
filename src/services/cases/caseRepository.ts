@@ -5,8 +5,13 @@ export type FarmCase = {
   id: string;
   ownerId: string;
   farmId: string;
+  subjectType?: 'animal' | 'crop' | 'general';
+  subjectId?: string;
+  subjectName?: string;
   animalId?: string;
   animalName?: string;
+  cropId?: string;
+  cropName?: string;
   disease: string;
   severity: 'Mild' | 'Moderate' | 'Severe' | 'Critical';
   district?: string;

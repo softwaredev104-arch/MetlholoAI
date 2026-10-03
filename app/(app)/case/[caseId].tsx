@@ -55,11 +55,20 @@ export default function CaseDetail() {
     );
   }
 
+  const subjectName =
+    record.subjectName ??
+    record.animalName ??
+    record.cropName ??
+    'General farm health case';
+  const subjectType =
+    record.subjectType ??
+    (record.animalId ? 'animal' : record.cropId ? 'crop' : 'general');
+
   return (
     <AppScreen maxWidth={900}>
       <SectionHeader
         title={record.disease}
-        subtitle={record.animalName || 'General farm health case'}
+        subtitle={subjectName}
         action={
           <StatusPill
             label={record.severity}
@@ -79,6 +88,15 @@ export default function CaseDetail() {
           <StatusPill
             label={record.status}
             tone={record.status === 'resolved' ? 'success' : 'info'}
+          />
+          <StatusPill
+            label={
+              subjectType === 'animal'
+                ? 'Animal'
+                : subjectType === 'crop'
+                  ? 'Crop'
+                  : 'General'
+            }
           />
           {record.location ? <StatusPill label={record.location} /> : null}
           {record.district ? <StatusPill label={record.district} /> : null}
@@ -105,8 +123,17 @@ export default function CaseDetail() {
               pathname: '/(app)/treatment/new' as any,
               params: {
                 caseId: record.id,
+                subjectType,
+                subjectId:
+                  record.subjectId ??
+                  record.animalId ??
+                  record.cropId ??
+                  '',
+                subjectName,
                 animalId: record.animalId || '',
                 animalName: record.animalName || '',
+                cropId: record.cropId || '',
+                cropName: record.cropName || '',
               },
             })
           }

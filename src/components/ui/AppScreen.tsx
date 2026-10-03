@@ -6,6 +6,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/design/themes';
@@ -31,15 +32,17 @@ export function AppScreen({
   const horizontalPadding =
     width < 480 ? Spacing.md : width < 768 ? Spacing.lg : Spacing.xl;
 
+  const responsiveFrame: ViewStyle = {
+    width: '100%',
+    maxWidth,
+    alignSelf: 'center',
+    paddingHorizontal: horizontalPadding,
+    paddingVertical: width < 480 ? Spacing.md : Spacing.lg,
+  };
+
   const responsiveContentStyle = [
     styles.content,
-    {
-      width: '100%',
-      maxWidth,
-      alignSelf: 'center' as const,
-      paddingHorizontal: horizontalPadding,
-      paddingVertical: width < 480 ? Spacing.md : Spacing.lg,
-    },
+    responsiveFrame,
     contentContainerStyle,
   ];
 

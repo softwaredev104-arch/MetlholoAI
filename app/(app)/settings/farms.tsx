@@ -8,15 +8,21 @@ import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
 import { StatusPill } from '@/components/app/ProductUI';
 import { useAuth } from '@/auth/AuthProvider';
-import { listFarms, type Farm } from '@/services/farms/farmRepository';
+import {
+  listFarms,
+  setPrimaryFarm,
+  type Farm,
+} from '@/services/farms/farmRepository';
+import { updateUserProfile } from '@/services/auth/userProfileService';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 
 export default function MyFarmsSettings() {
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, refreshProfile } = useAuth();
   const { colors } = useTheme();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [changingPrimary, setChangingPrimary] = useState('');
 
   async function load() {
     if (!firebaseUser) return;
@@ -31,6 +37,25 @@ export default function MyFarmsSettings() {
   useEffect(() => {
     void load();
   }, [firebaseUser?.uid]);
+
+  async function makePrimary(farm: Farm) {
+    if (!firebaseUser) return;
+    setChangingPrimary(farm.id);
+    try {
+      const selected = await setPrimaryFarm(firebaseUser.uid, farm.id);
+      if (!selected) return;
+      await updateUserProfile(firebaseUser.uid, {
+        farmName: selected.name,
+        farmType: selected.farmType,
+        farmSizeBand: selected.farmSizeBand,
+        locationLabel: selected.location,
+      });
+      await refreshProfile();
+      await load();
+    } finally {
+      setChangingPrimary('');
+    }
+  }
 
   return (
     <AppScreen maxWidth={820}>
@@ -63,15 +88,7 @@ export default function MyFarmsSettings() {
         </AppCard>
       ) : (
         farms.map((farm, index) => (
-          <AppCard
-            key={farm.id}
-            onPress={() =>
-              router.push({
-                pathname: '/(app)/settings/farm/[farmId]' as any,
-                params: { farmId: farm.id },
-              })
-            }
-          >
+          <AppCard key={farm.id}>
             <View style={styles.row}>
               <View style={[styles.icon, { backgroundColor: colors.primarySubtle }]}>
                 <Ionicons name="leaf-outline" size={24} color={colors.primary} />
@@ -84,6 +101,7 @@ export default function MyFarmsSettings() {
               </View>
               {index === 0 ? <StatusPill label="Primary" tone="success" /> : null}
             </View>
+
             <View style={styles.meta}>
               {farm.farmType ? <StatusPill label={farm.farmType} /> : null}
               {farm.farmSizeBand ? (
@@ -93,11 +111,38 @@ export default function MyFarmsSettings() {
                 <StatusPill label="Weather mapped" tone="success" />
               ) : null}
             </View>
+
+            <View style={styles.actions}>
+              <AppButton
+                title="Edit Farm"
+                variant="secondary"
+                icon="create-outline"
+                onPress={() =>
+                  router.push({
+                    pathname: '/(app)/settings/farm/[farmId]' as any,
+                    params: { farmId: farm.id },
+                  })
+                }
+              />
+              {index !== 0 ? (
+                <AppButton
+                  title="Set as Primary"
+                  variant="ghost"
+                  icon="star-outline"
+                  loading={changingPrimary === farm.id}
+                  onPress={() => makePrimary(farm)}
+                />
+              ) : null}
+            </View>
           </AppCard>
         ))
       )}
 
-      <AppButton title="Back to Profile" variant="ghost" onPress={() => router.back()} />
+      <AppButton
+        title="Back to Profile"
+        variant="ghost"
+        onPress={() => router.back()}
+      />
     </AppScreen>
   );
 }
@@ -113,4 +158,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   meta: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  actions: { gap: Spacing.sm },
 });

@@ -1,15 +1,23 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'react-native';
 import { AppProviders } from '@/providers/AppProviders';
 import { useTheme } from '@/design/themes';
 import { ErrorBoundary } from '@/components/system/ErrorBoundary';
 
 function RootLayoutContent() {
   const { colors } = useTheme();
+  const scheme = useColorScheme();
+
   return (
     <>
-      <StatusBar style={colors.background === '#0E1411' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      />
     </>
   );
 }

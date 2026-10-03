@@ -12,6 +12,7 @@ import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
   type AnimalRecord,
+  type CropFieldRecord,
 } from '@/services/farms/domainRepository';
 import { createCase } from '@/services/cases/caseRepository';
 import { useTheme } from '@/design/themes';
@@ -19,16 +20,32 @@ import { Spacing } from '@/design/spacing';
 
 const severities = ['Mild', 'Moderate', 'Severe', 'Critical'] as const;
 
+type SubjectType = 'animal' | 'crop' | 'general';
+
 export default function NewCase() {
   const params = useLocalSearchParams<{
     animalId?: string;
     animalName?: string;
+    cropId?: string;
+    cropName?: string;
   }>();
   const { user, farm } = usePrimaryFarm();
   const { colors } = useTheme();
   const [animals, setAnimals] = useState<AnimalRecord[]>([]);
-  const [animalId, setAnimalId] = useState(params.animalId ?? '');
-  const [animalName, setAnimalName] = useState(params.animalName ?? '');
+  const [crops, setCrops] = useState<CropFieldRecord[]>([]);
+  const initialSubjectType: SubjectType = params.animalId
+    ? 'animal'
+    : params.cropId
+      ? 'crop'
+      : 'general';
+  const [subjectType, setSubjectType] =
+    useState<SubjectType>(initialSubjectType);
+  const [subjectId, setSubjectId] = useState(
+    params.animalId ?? params.cropId ?? '',
+  );
+  const [subjectName, setSubjectName] = useState(
+    params.animalName ?? params.cropName ?? '',
+  );
   const [disease, setDisease] = useState('');
   const [severity, setSeverity] =
     useState<(typeof severities)[number]>('Moderate');
@@ -42,8 +59,24 @@ export default function NewCase() {
 
   useEffect(() => {
     if (!user || !farm) return;
-    farmDomain.animals.list(user.uid, farm.id).then(setAnimals);
+    Promise.all([
+      farmDomain.animals.list(user.uid, farm.id),
+      farmDomain.crops.list(user.uid, farm.id),
+    ]).then(([nextAnimals, nextCrops]) => {
+      setAnimals(nextAnimals);
+      setCrops(nextCrops);
+    });
   }, [user?.uid, farm?.id]);
+
+  function chooseSubject(
+    type: SubjectType,
+    id = '',
+    name = '',
+  ) {
+    setSubjectType(type);
+    setSubjectId(id);
+    setSubjectName(name);
+  }
 
   async function addPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -52,10 +85,9 @@ export default function NewCase() {
       allowsMultipleSelection: true,
     });
     if (!result.canceled) {
-      setPhotos(current => [
-        ...current,
-        ...result.assets.map(asset => asset.uri),
-      ].slice(0, 5));
+      setPhotos(current =>
+        [...current, ...result.assets.map(asset => asset.uri)].slice(0, 5),
+      );
     }
   }
 
@@ -70,8 +102,15 @@ export default function NewCase() {
     setError('');
     try {
       const created = await createCase(user.uid, farm.id, {
-        animalId: animalId || undefined,
-        animalName: animalName || undefined,
+        subjectType,
+        subjectId: subjectId || undefined,
+        subjectName: subjectName || undefined,
+        animalId: subjectType === 'animal' ? subjectId || undefined : undefined,
+        animalName:
+          subjectType === 'animal' ? subjectName || undefined : undefined,
+        cropId: subjectType === 'crop' ? subjectId || undefined : undefined,
+        cropName:
+          subjectType === 'crop' ? subjectName || undefined : undefined,
         disease: disease.trim(),
         severity,
         district: district.trim() || undefined,
@@ -94,29 +133,31 @@ export default function NewCase() {
     <AppScreen maxWidth={820}>
       <AppText variant="largeTitle">Create Case Record</AppText>
       <AppText style={{ color: colors.textSecondary }}>
-        Record an animal health issue and link follow-up treatment to the same case.
+        Log a new health case for livestock, crops, or the wider farm.
       </AppText>
 
       <View style={styles.section}>
-        <AppText variant="headline">Animal</AppText>
+        <AppText variant="headline">Animal or crop</AppText>
         <View style={styles.chips}>
           <ChoiceChip
             label="General farm case"
-            selected={!animalId}
-            onPress={() => {
-              setAnimalId('');
-              setAnimalName('');
-            }}
+            selected={subjectType === 'general'}
+            onPress={() => chooseSubject('general')}
           />
           {animals.map(animal => (
             <ChoiceChip
-              key={animal.id}
-              label={animal.name}
-              selected={animalId === animal.id}
-              onPress={() => {
-                setAnimalId(animal.id);
-                setAnimalName(animal.name);
-              }}
+              key={'animal-' + animal.id}
+              label={animal.name + (animal.species ? ' · ' + animal.species : '')}
+              selected={subjectType === 'animal' && subjectId === animal.id}
+              onPress={() => chooseSubject('animal', animal.id, animal.name)}
+            />
+          ))}
+          {crops.map(crop => (
+            <ChoiceChip
+              key={'crop-' + crop.id}
+              label={crop.name + (crop.cropType ? ' · ' + crop.cropType : '')}
+              selected={subjectType === 'crop' && subjectId === crop.id}
+              onPress={() => chooseSubject('crop', crop.id, crop.name)}
             />
           ))}
         </View>
@@ -126,7 +167,7 @@ export default function NewCase() {
         label="Disease / problem"
         value={disease}
         onChangeText={setDisease}
-        placeholder="e.g. Lumpy skin lesions"
+        placeholder="Enter or select disease"
       />
 
       <View style={styles.section}>

@@ -275,6 +275,11 @@ export const driveAuthService = {
     return acceptToken(token, expiresIn, options);
   },
 
+  async ensureConnected(ownerId: string) {
+    if (this.isConnected()) return true;
+    return this.restore({ ownerId });
+  },
+
   async disconnect(ownerId?: string) {
     clearToken();
     if (ownerId) {

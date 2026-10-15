@@ -73,7 +73,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const bootstrapUser = async (user: User) => {
     const localProfile = await getUserProfile(user.uid);
-    const localFarms = await listFarms(user.uid);
     const googleUser = isGoogleUser(user);
     const rememberedGrant = await driveAuthService.hasRememberedGrant(user.uid);
 
@@ -85,12 +84,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
     }
 
-    const needsHydration =
-      !localProfile ||
-      !localProfile.onboardingCompleted ||
-      localFarms.length === 0;
-
-    if (driveAuthService.isConnected() && needsHydration) {
+    // Always reconcile verified Drive data when a fresh token is available:
+    // even a complete local profile can contain an outdated set of farm records.
+    // The recovery service merges by record ID, preserving unsynced local work.
+    if (driveAuthService.isConnected()) {
       await restoreWorkspaceFromDrive(user.uid);
     }
 

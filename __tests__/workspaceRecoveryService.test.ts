@@ -1,7 +1,7 @@
 const mockStorage = new Map<string, string>();
 const mockRemote = new Map<string, unknown>();
 
-jest.mock('@react-native-async-mockStorage/async-mockStorage', () => ({
+jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
     getItem: jest.fn(async (key: string) => mockStorage.get(key) ?? null),

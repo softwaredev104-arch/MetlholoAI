@@ -232,6 +232,7 @@ export const authService = {
   },
 
   async logout() {
+    await driveAuthService.disconnect();
     await signOut(getFirebaseAuth());
   },
 };

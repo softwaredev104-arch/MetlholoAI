@@ -7,10 +7,14 @@ const ROOT_FOLDER = 'MetlholoAI';
 async function authorizedFetch(url: string, init: RequestInit = {}) {
   const token = driveAuthService.getAccessToken();
   if (!token) throw new Error('Google Drive is not connected.');
+
   const headers = new Headers(init.headers);
   headers.set('Authorization', `Bearer ${token}`);
+
   const response = await fetch(url, { ...init, headers });
-  if (!response.ok) throw new Error(`Google Drive request failed (${response.status}).`);
+  if (!response.ok) {
+    throw new Error(`Google Drive request failed (${response.status}).`);
+  }
   return response;
 }
 
@@ -18,15 +22,21 @@ async function findFile(name: string, parentId?: string, mimeType?: string) {
   const filters = [`name = '${name.replace(/'/g, "\\'")}'`, 'trashed = false'];
   if (parentId) filters.push(`'${parentId}' in parents`);
   if (mimeType) filters.push(`mimeType = '${mimeType}'`);
+
   const params = new URLSearchParams({
     q: filters.join(' and '),
     spaces: 'drive',
-    fields: 'files(id,name,mimeType,parents)',
+    fields: 'files(id,name,mimeType,parents,modifiedTime)',
     pageSize: '10',
+    orderBy: 'modifiedTime desc',
   });
+
   const response = await authorizedFetch(`${API}/files?${params.toString()}`);
-  const body = await response.json() as { files?: Array<{ id: string }> };
-  return body.files?.[0]?.id ?? null;
+  const body = (await response.json()) as {
+    files?: Array<{ id: string }>;
+  };
+
+  return body.files?.at(0)?.id ?? null;
 }
 
 async function createMetadata(metadata: Record<string, unknown>) {
@@ -38,14 +48,32 @@ async function createMetadata(metadata: Record<string, unknown>) {
   return response.json() as Promise<{ id: string }>;
 }
 
-async function ensureRootFolder() {
-  const mime = 'application/vnd.google-apps.folder';
-  const existing = await findFile(ROOT_FOLDER, undefined, mime);
-  if (existing) return existing;
-  return (await createMetadata({ name: ROOT_FOLDER, mimeType: mime })).id;
+async function findRootFolder() {
+  return findFile(
+    ROOT_FOLDER,
+    undefined,
+    'application/vnd.google-apps.folder',
+  );
 }
 
-async function uploadJson(fileId: string | null, folderId: string, name: string, value: unknown) {
+async function ensureRootFolder() {
+  const existing = await findRootFolder();
+  if (existing) return existing;
+
+  return (
+    await createMetadata({
+      name: ROOT_FOLDER,
+      mimeType: 'application/vnd.google-apps.folder',
+    })
+  ).id;
+}
+
+async function uploadJson(
+  fileId: string | null,
+  folderId: string,
+  name: string,
+  value: unknown,
+) {
   const boundary = 'metlholo_' + Date.now();
   const metadata = fileId ? { name } : { name, parents: [folderId] };
   const multipart =
@@ -64,6 +92,7 @@ async function uploadJson(fileId: string | null, folderId: string, name: string,
     headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
     body: multipart,
   });
+
   return response.json() as Promise<{ id: string }>;
 }
 
@@ -71,9 +100,25 @@ export const driveJsonStore = {
   isConnected() {
     return driveAuthService.isConnected();
   },
+
+  async readJson<T>(name: string): Promise<T | null> {
+    const folderId = await findRootFolder();
+    if (!folderId) return null;
+
+    const fileId = await findFile(name, folderId);
+    if (!fileId) return null;
+
+    const response = await authorizedFetch(`${API}/files/${fileId}?alt=media`);
+    try {
+      return (await response.json()) as T;
+    } catch {
+      return null;
+    }
+  },
+
   async writeJson(name: string, value: unknown) {
     const folderId = await ensureRootFolder();
-    const existing = await findFile(name, folderId, 'application/json');
+    const existing = await findFile(name, folderId);
     return uploadJson(existing, folderId, name, value);
   },
 };

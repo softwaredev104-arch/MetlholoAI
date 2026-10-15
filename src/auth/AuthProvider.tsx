@@ -33,6 +33,7 @@ type AuthContextValue = {
   status: AuthStatus;
   refreshProfile: () => Promise<void>;
   recoverFromDrive: () => Promise<boolean>;
+  continueWithoutDriveBackup: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -174,6 +175,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const continueWithoutDriveBackup = async () => {
+    if (!firebaseUser) throw new Error('Please sign in first.');
+    const existing = await getUserProfile(firebaseUser.uid);
+    if (existing) {
+      applyProfile(existing);
+      return;
+    }
+    const next = await createInitialUserProfile({
+      uid: firebaseUser.uid,
+      displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Farmer',
+      email: firebaseUser.email ?? '',
+      photoURL: firebaseUser.photoURL,
+      role: 'FARMER',
+    });
+    applyProfile(next);
+  };
+
   useEffect(() => {
     if (!isFirebaseConfigured) return;
 
@@ -220,6 +238,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       status,
       refreshProfile,
       recoverFromDrive,
+      continueWithoutDriveBackup,
     }),
     [firebaseUser, profile, status],
   );

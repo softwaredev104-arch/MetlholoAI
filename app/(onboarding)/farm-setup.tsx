@@ -62,7 +62,9 @@ export default function FarmSetup() {
     setConnectingDrive(true);
     setError('');
     try {
-      await driveAuthService.connect();
+      await driveAuthService.connect({
+        ownerId: firebaseUser?.uid,
+      });
       setDriveConnected(true);
     } catch (e) {
       setError(

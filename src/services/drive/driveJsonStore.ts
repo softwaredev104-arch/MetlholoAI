@@ -53,13 +53,26 @@ async function createMetadata(metadata: Record<string, unknown>) {
   return response.json() as Promise<{ id: string }>;
 }
 
+let pendingRootFolder: Promise<string> | null = null;
+
 async function ensureRootFolder() {
-  const existing = await findRootFolder();
-  if (existing) return existing;
-  return (await createMetadata({
-    name: ROOT_FOLDER,
-    mimeType: 'application/vnd.google-apps.folder',
-  })).id;
+  // A reconnect can synchronize several datasets at once. Reuse the same
+  // folder creation promise so parallel writes never create split backups.
+  if (!pendingRootFolder) {
+    pendingRootFolder = (async () => {
+      const existing = await findRootFolder();
+      if (existing) return existing;
+      return (await createMetadata({
+        name: ROOT_FOLDER,
+        mimeType: 'application/vnd.google-apps.folder',
+      })).id;
+    })();
+  }
+  try {
+    return await pendingRootFolder;
+  } finally {
+    pendingRootFolder = null;
+  }
 }
 
 function ownerOf(value: unknown) {

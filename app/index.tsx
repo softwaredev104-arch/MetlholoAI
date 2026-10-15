@@ -6,6 +6,7 @@ export default function Index() {
   const { status } = useAuth();
   if (status === 'AUTHENTICATING') return <AppLoadingState />;
   if (status === 'AUTHENTICATED') return <Redirect href="/(app)/(tabs)" />;
+  if (status === 'DATA_RECOVERY_REQUIRED') return <Redirect href="/(auth)/restore-data" />;
   if (status === 'PROFILE_INCOMPLETE') return <Redirect href="/(onboarding)/profile" />;
   if (status === 'EMAIL_VERIFICATION_REQUIRED') return <Redirect href="/(auth)/verify-email" />;
   if (status === 'ACCOUNT_SUSPENDED') return <Redirect href="/suspended" />;

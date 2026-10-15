@@ -13,6 +13,13 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
+jest.mock('@/services/drive/driveAuthService', () => ({
+  driveAuthService: {
+    isConnected: jest.fn(() => true),
+    ensureConnected: jest.fn(async () => true),
+  },
+}));
+
 jest.mock('@/services/drive/driveJsonStore', () => ({
   driveJsonStore: {
     isConnected: jest.fn(() => true),

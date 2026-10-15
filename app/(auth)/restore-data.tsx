@@ -10,10 +10,11 @@ import { authService } from '@/services/auth/authService';
 import { useTheme } from '@/design/themes';
 
 export default function RestoreData() {
-  const { firebaseUser, recoverFromDrive } = useAuth();
+  const { firebaseUser, recoverFromDrive, continueWithoutDriveBackup } = useAuth();
   const { colors } = useTheme();
   const [recovering, setRecovering] = useState(false);
   const [error, setError] = useState('');
+  const [confirmLocal, setConfirmLocal] = useState(false);
 
   async function recover() {
     setRecovering(true);
@@ -28,6 +29,19 @@ export default function RestoreData() {
         return;
       }
       router.replace('/');
+    } finally {
+      setRecovering(false);
+    }
+  }
+
+  async function continueLocally() {
+    setRecovering(true);
+    setError('');
+    try {
+      await continueWithoutDriveBackup();
+      router.replace('/');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to continue.');
     } finally {
       setRecovering(false);
     }
@@ -66,6 +80,23 @@ export default function RestoreData() {
       />
 
       {error ? <AppText style={{ color: colors.error }}>{error}</AppText> : null}
+
+      <AppCard>
+        <AppText variant="headline">No Google Drive backup?</AppText>
+        <AppText style={{ color: colors.textSecondary }}>
+          You can continue with local farm setup. Only choose this if you
+          have checked that the original Google account or previous device
+          does not contain a workspace you still need. We will not delete
+          any files from Google Drive.
+        </AppText>
+        {!confirmLocal ? (
+          <AppButton title="Continue without Drive backup" variant="secondary"
+            onPress={() => setConfirmLocal(true)} disabled={recovering} />
+        ) : (
+          <AppButton title="Confirm local workspace" variant="secondary"
+            onPress={continueLocally} loading={recovering} />
+        )}
+      </AppCard>
 
       <AppButton
         title="Sign Out"

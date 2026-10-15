@@ -33,6 +33,7 @@ type AuthContextValue = {
   status: AuthStatus;
   refreshProfile: () => Promise<void>;
   recoverFromDrive: () => Promise<boolean>;
+  continueWithoutDriveBackup: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -72,8 +73,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const bootstrapUser = async (user: User) => {
-    const localProfile = await getUserProfile(user.uid);
-    const localFarms = await listFarms(user.uid);
     const googleUser = isGoogleUser(user);
     const rememberedGrant = await driveAuthService.hasRememberedGrant(user.uid);
 
@@ -85,17 +84,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
     }
 
-    const needsHydration =
-      !localProfile ||
-      !localProfile.onboardingCompleted ||
-      localFarms.length === 0;
-
-    if (driveAuthService.isConnected() && needsHydration) {
+    // Always reconcile verified Drive data when a fresh token is available:
+    // even a complete local profile can contain an outdated set of farm records.
+    // The recovery service merges by record ID, preserving unsynced local work.
+    if (driveAuthService.isConnected()) {
       await restoreWorkspaceFromDrive(user.uid);
     }
 
     const restoredOrLocal = await getUserProfile(user.uid);
     if (restoredOrLocal) {
+      const existingFarms = await listFarms(user.uid);
+      // A prior completed profile without its farms must not be treated as a
+      // newly empty farm workspace. Ask for recovery before allowing writes.
+      if (restoredOrLocal.onboardingCompleted && existingFarms.length === 0) {
+        return null;
+      }
+      if (!restoredOrLocal.onboardingCompleted && rememberedGrant &&
+          !driveAuthService.isConnected() && isReturningUser(user)) {
+        return null;
+      }
       return restoredOrLocal;
     }
 
@@ -167,10 +174,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const continueWithoutDriveBackup = async () => {
+    if (!firebaseUser) throw new Error('Please sign in first.');
+    const existing = await getUserProfile(firebaseUser.uid);
+    if (existing) {
+      applyProfile(existing);
+      return;
+    }
+    const next = await createInitialUserProfile({
+      uid: firebaseUser.uid,
+      displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Farmer',
+      email: firebaseUser.email ?? '',
+      photoURL: firebaseUser.photoURL,
+      role: 'FARMER',
+    });
+    applyProfile(next);
+  };
+
   useEffect(() => {
     if (!isFirebaseConfigured) return;
+    let active = true;
+    let sequence = 0;
 
-    return authService.subscribe(async user => {
+    const unsubscribe = authService.subscribe(async user => {
+      const currentSequence = ++sequence;
+      if (!active) return;
       setFirebaseUser(user);
       setProfile(null);
 
@@ -188,6 +216,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       try {
         const next = await bootstrapUser(user);
+        if (!active || currentSequence !== sequence) return;
 
         if (!next) {
           setStatus('DATA_RECOVERY_REQUIRED');
@@ -197,6 +226,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         applyProfile(next);
       } catch {
         const local = await getUserProfile(user.uid);
+        if (!active || currentSequence !== sequence) return;
         if (local) {
           applyProfile(local);
         } else {
@@ -204,6 +234,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       }
     });
+    return () => {
+      active = false;
+      ++sequence;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo(
@@ -213,6 +248,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       status,
       refreshProfile,
       recoverFromDrive,
+      continueWithoutDriveBackup,
     }),
     [firebaseUser, profile, status],
   );

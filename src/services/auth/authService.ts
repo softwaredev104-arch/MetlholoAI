@@ -102,18 +102,11 @@ async function getGoogleAccessToken() {
         reject(new Error(message));
       };
 
-      const timeout = setTimeout(() => {
-        finishError(
-          'Google sign-in did not finish. Please try again and keep the Google account window open until it closes.',
-        );
-      }, 20_000);
-
       const client = window.google!.accounts!.oauth2!.initTokenClient({
         client_id: googleDriveClientId,
         scope: GOOGLE_SIGN_IN_SCOPE,
         callback: response => {
           if (settled) return;
-          clearTimeout(timeout);
 
           if (response.error || !response.access_token) {
             settled = true;
@@ -134,7 +127,6 @@ async function getGoogleAccessToken() {
           });
         },
         error_callback: error => {
-          clearTimeout(timeout);
           finishError(
             `Google sign-in popup error: ${error.type ?? 'unknown_error'}.`,
           );
@@ -179,18 +171,10 @@ export const authService = {
       googleToken.accessToken,
     );
 
-    const credential = await Promise.race([
-      signInWithCredential(getFirebaseAuth(), firebaseCredential),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () =>
-            reject(
-              new Error('Firebase sign-in timed out. Please try again.'),
-            ),
-          15_000,
-        ),
-      ),
-    ]);
+    const credential = await signInWithCredential(
+      getFirebaseAuth(),
+      firebaseCredential,
+    );
 
     await driveAuthService.adoptAccessToken(
       googleToken.accessToken,

@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import { authService } from '@/services/auth/authService';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import { restoreWorkspaceFromDrive } from '@/services/drive/workspaceRecoveryService';
 import { StatusPill } from '@/components/app/ProductUI';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
@@ -22,21 +23,30 @@ type SettingsItem = {
 };
 
 export default function Profile() {
-  const { firebaseUser, profile } = useAuth();
+  const { firebaseUser, profile, refreshProfile } = useAuth();
   const { farm } = usePrimaryFarm();
   const { colors } = useTheme();
   const [driveConnected, setDriveConnected] = useState(
     driveAuthService.isConnected(),
   );
   const [connecting, setConnecting] = useState(false);
+  const [driveError, setDriveError] = useState('');
 
   async function connectDrive() {
+    if (!firebaseUser) return;
     setConnecting(true);
+    setDriveError('');
     try {
       await driveAuthService.connect({
-        ownerId: firebaseUser?.uid,
+        ownerId: firebaseUser.uid,
+        expectedEmail: firebaseUser.email,
+        prompt: 'select_account',
       });
+      await restoreWorkspaceFromDrive(firebaseUser.uid);
+      await refreshProfile();
       setDriveConnected(true);
+    } catch (error) {
+      setDriveError(error instanceof Error ? error.message : 'Google Drive restore failed.');
     } finally {
       setConnecting(false);
     }
@@ -155,12 +165,13 @@ export default function Profile() {
         </View>
         {!driveConnected ? (
           <AppButton
-            title="Reconnect Google Drive"
+            title="Reconnect and restore Google Drive"
             variant="secondary"
             onPress={connectDrive}
             loading={connecting}
           />
         ) : null}
+        {driveError ? <AppText style={{ color: colors.error }}>{driveError}</AppText> : null}
       </AppCard>
 
       <AppText variant="title2">Account Settings</AppText>

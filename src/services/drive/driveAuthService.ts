@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { googleDriveClientId, isGoogleDriveConfigured } from '@/config/env';
+import { getFirebaseAuth } from '@/services/firebase/client';
 
 declare global {
   interface Window {
@@ -44,6 +45,7 @@ const grantKey = (ownerId: string) => `metlholoai.driveGrant.${ownerId}`;
 let accessToken = '';
 let expiresAt = 0;
 let connectedEmail = '';
+let connectedOwnerUid = '';
 let loader: Promise<void> | null = null;
 
 function loadGoogleIdentityServices() {
@@ -141,6 +143,7 @@ function clearToken() {
   accessToken = '';
   expiresAt = 0;
   connectedEmail = '';
+  connectedOwnerUid = '';
 }
 
 async function acceptToken(
@@ -151,8 +154,13 @@ async function acceptToken(
   const identity = await getGoogleIdentity(token);
   const actualEmail = identity?.email?.trim().toLowerCase() ?? '';
   const expectedEmail = options.expectedEmail?.trim().toLowerCase() ?? '';
+  const firebaseUid = getFirebaseAuth().currentUser?.uid;
+  if (options.ownerId && firebaseUid !== options.ownerId) {
+    clearToken();
+    throw new Error('The Firebase account has changed. Reconnect the matching account.');
+  }
 
-  if (expectedEmail && actualEmail && expectedEmail !== actualEmail) {
+  if (expectedEmail && expectedEmail !== actualEmail) {
     clearToken();
     throw new Error(
       `Google Drive is connected to ${identity?.email}, but this MetlholoAI account uses ${options.expectedEmail}. Choose the matching Google account.`,
@@ -162,6 +170,7 @@ async function acceptToken(
   accessToken = token;
   expiresAt = Date.now() + expiresIn * 1000;
   connectedEmail = identity?.email ?? '';
+  connectedOwnerUid = options.ownerId ?? '';
   await rememberGrant(options.ownerId, identity?.email);
   return token;
 }
@@ -225,7 +234,10 @@ export const driveAuthService = {
   },
 
   isConnected() {
-    return Boolean(accessToken && Date.now() < expiresAt - 30_000);
+    return Boolean(accessToken &&
+      connectedOwnerUid &&
+      connectedOwnerUid === getFirebaseAuth().currentUser?.uid &&
+      Date.now() < expiresAt - 30_000);
   },
 
   getAccessToken() {
@@ -247,6 +259,17 @@ export const driveAuthService = {
   async restore(options: Omit<ConnectOptions, 'prompt'> & { force?: boolean }) {
     if (Platform.OS !== 'web' || !isGoogleDriveConfigured) return false;
     if (this.isConnected()) return true;
+    if (accessToken && Date.now() < expiresAt - 30_000 && options.ownerId) {
+      try {
+        await acceptToken(accessToken, Math.max(60, (expiresAt - Date.now()) / 1000), {
+          ownerId: options.ownerId,
+          expectedEmail: options.expectedEmail,
+        });
+        return true;
+      } catch {
+        clearToken();
+      }
+    }
 
     const remembered = options.ownerId
       ? await readGrant(options.ownerId)
@@ -257,7 +280,7 @@ export const driveAuthService = {
     try {
       await requestToken({
         ownerId: options.ownerId,
-        expectedEmail: remembered?.accountEmail ?? options.expectedEmail,
+        expectedEmail: options.expectedEmail ?? remembered?.accountEmail,
         prompt: '',
       });
       return true;
@@ -275,9 +298,12 @@ export const driveAuthService = {
     return acceptToken(token, expiresIn, options);
   },
 
-  async ensureConnected(ownerId: string) {
-    if (this.isConnected()) return true;
-    return this.restore({ ownerId });
+  async ensureConnected(_ownerId: string) {
+    // Farm repositories may save locally while a token is expired. Do not
+    // silently renew here and overwrite an older cloud snapshot before the
+    // returning-user reconciliation has run. Reauthorization and restore
+    // happen in AuthProvider or from the explicit Profile/Recovery action.
+    return this.isConnected();
   },
 
   async disconnect(ownerId?: string) {

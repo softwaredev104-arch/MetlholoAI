@@ -14,6 +14,7 @@ import {
 } from '@/services/auth/userProfileService';
 import { driveAuthService } from '@/services/drive/driveAuthService';
 import { isFirebaseConfigured } from '@/config/env';
+import { listFarms } from '@/services/farms/farmRepository';
 import type { UserProfile } from '@/types/user';
 
 export type AuthStatus =
@@ -96,6 +97,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       try {
         const current = await getUserProfile(user.uid);
+        if (!active || cycle !== sequence) return;
+        if (current?.onboardingCompleted) {
+          const farms = await listFarms(user.uid);
+          if (!active || cycle !== sequence) return;
+          if (farms.length === 0) {
+            setProfile(current);
+            setStatus('RECOVERY_REQUIRED');
+            return;
+          }
+        }
+        if (current && !current.onboardingCompleted &&
+            await driveAuthService.wasPreviouslyConnected(user.uid)) {
+          // A partial local profile must not replace an older Drive profile.
+          if (!active || cycle !== sequence) return;
+          setProfile(current);
+          setStatus('RECOVERY_REQUIRED');
+          return;
+        }
         if (active && cycle === sequence) applyProfile(current);
       } catch {
         if (active && cycle === sequence) applyProfile(null);

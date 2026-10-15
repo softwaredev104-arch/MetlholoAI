@@ -9,10 +9,11 @@ import { StatusPill } from '@/components/app/ProductUI';
 import { useAuth } from '@/auth/AuthProvider';
 import { authService } from '@/services/auth/authService';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import { restoreWorkspaceFromDrive } from '@/services/drive/workspaceRecoveryService';
 import { useTheme } from '@/design/themes';
 
 export default function PrivacySecurity() {
-  const { firebaseUser, profile } = useAuth();
+  const { firebaseUser, profile, refreshProfile } = useAuth();
   const { colors } = useTheme();
   const [driveConnected, setDriveConnected] = useState(
     driveAuthService.isConnected(),
@@ -24,11 +25,16 @@ export default function PrivacySecurity() {
     setWorking(true);
     setMessage('');
     try {
+      if (!firebaseUser) throw new Error('Please sign in first.');
       await driveAuthService.connect({
-        ownerId: firebaseUser?.uid,
+        ownerId: firebaseUser.uid,
+        expectedEmail: firebaseUser.email,
+        prompt: 'select_account',
       });
+      await restoreWorkspaceFromDrive(firebaseUser.uid);
+      await refreshProfile();
       setDriveConnected(true);
-      setMessage('Google Drive access connected for this session.');
+      setMessage('Your existing Drive data has been checked and restored to this device.');
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : 'Unable to connect Google Drive.',
@@ -117,7 +123,7 @@ export default function PrivacySecurity() {
           />
         ) : (
           <AppButton
-            title="Connect Google Drive"
+            title="Reconnect and restore Google Drive"
             variant="secondary"
             onPress={reconnectDrive}
             loading={working}

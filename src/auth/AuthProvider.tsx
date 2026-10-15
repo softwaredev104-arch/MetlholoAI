@@ -193,8 +193,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
+    let active = true;
+    let sequence = 0;
 
-    return authService.subscribe(async user => {
+    const unsubscribe = authService.subscribe(async user => {
+      const currentSequence = ++sequence;
+      if (!active) return;
       setFirebaseUser(user);
       setProfile(null);
 
@@ -212,6 +216,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       try {
         const next = await bootstrapUser(user);
+        if (!active || currentSequence !== sequence) return;
 
         if (!next) {
           setStatus('DATA_RECOVERY_REQUIRED');
@@ -221,6 +226,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         applyProfile(next);
       } catch {
         const local = await getUserProfile(user.uid);
+        if (!active || currentSequence !== sequence) return;
         if (local) {
           applyProfile(local);
         } else {
@@ -228,6 +234,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       }
     });
+    return () => {
+      active = false;
+      ++sequence;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo(

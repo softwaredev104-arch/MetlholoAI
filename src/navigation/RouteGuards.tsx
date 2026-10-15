@@ -1,5 +1,5 @@
 import { PropsWithChildren, useEffect } from 'react';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { AppLoadingState } from '@/components/ui/AppLoadingState';
 import { useAuth } from '@/auth/AuthProvider';
 
@@ -10,6 +10,7 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
     if (status === 'UNAUTHENTICATED') router.replace('/(auth)/welcome');
     else if (status === 'EMAIL_VERIFICATION_REQUIRED') router.replace('/(auth)/verify-email');
     else if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
+    else if (status === 'RECOVERY_REQUIRED') router.replace('/(auth)/restore-workspace');
     else if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
   }, [status]);
 
@@ -34,12 +35,15 @@ export function OnboardingRoute({ children }: PropsWithChildren) {
 
 export function PublicRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (status === 'AUTHENTICATED') router.replace('/(app)/(tabs)');
     else if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
+    else if (status === 'RECOVERY_REQUIRED') router.replace('/(auth)/restore-workspace');
     else if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
-  }, [status]);
+    else if (status === 'RECOVERY_REQUIRED' && !pathname.includes('restore-workspace')) router.replace('/(auth)/restore-workspace');
+  }, [status, pathname]);
 
   if (status === 'AUTHENTICATING') return <AppLoadingState />;
   return children;

@@ -1,20 +1,20 @@
-const storage = new Map<string, string>();
-const remote = new Map<string, unknown>();
+const mockStorage = new Map<string, string>();
+const mockRemote = new Map<string, unknown>();
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
+jest.mock('@react-native-async-mockStorage/async-mockStorage', () => ({
   __esModule: true,
   default: {
-    getItem: jest.fn(async (key: string) => storage.get(key) ?? null),
+    getItem: jest.fn(async (key: string) => mockStorage.get(key) ?? null),
     setItem: jest.fn(async (key: string, value: string) => {
-      storage.set(key, value);
+      mockStorage.set(key, value);
     }),
     multiGet: jest.fn(async (keys: string[]) =>
-      keys.map(key => [key, storage.get(key) ?? null]),
+      keys.map(key => [key, mockStorage.get(key) ?? null]),
     ),
     multiSet: jest.fn(async (pairs: Array<[string, string]>) => {
-      pairs.forEach(([key, value]) => storage.set(key, value));
+      pairs.forEach(([key, value]) => mockStorage.set(key, value));
     }),
-    removeItem: jest.fn(async (key: string) => storage.delete(key)),
+    removeItem: jest.fn(async (key: string) => mockStorage.delete(key)),
   },
 }));
 
@@ -32,9 +32,9 @@ jest.mock('@/services/firebase/client', () => ({
 jest.mock('@/services/drive/driveJsonStore', () => ({
   driveJsonStore: {
     isConnected: jest.fn(() => true),
-    readJson: jest.fn(async (name: string) => remote.get(name) ?? null),
+    readJson: jest.fn(async (name: string) => mockRemote.get(name) ?? null),
     writeJson: jest.fn(async (name: string, value: unknown) => {
-      remote.set(name, value);
+      mockRemote.set(name, value);
       return { id: name };
     }),
   },
@@ -71,11 +71,11 @@ function farmRecord(
 }
 
 beforeEach(() => {
-  storage.clear();
-  remote.clear();
+  mockStorage.clear();
+  mockRemote.clear();
   jest.clearAllMocks();
 
-  remote.set('profile.json', {
+  mockRemote.set('profile.json', {
     uid: 'user-1',
     displayName: 'Returning Farmer',
     email: 'farmer@example.com',
@@ -86,7 +86,7 @@ beforeEach(() => {
     updatedAt: '2026-10-10T08:00:00.000Z',
   });
 
-  remote.set('farm-data.json', {
+  mockRemote.set('farm-data.json', {
     ownerId: 'user-1',
     farms: [farm],
     records: {
@@ -108,7 +108,7 @@ beforeEach(() => {
     updatedAt: '2026-10-10T08:00:00.000Z',
   });
 
-  remote.set('cases-farm-1.json', {
+  mockRemote.set('cases-farm-1.json', {
     ownerId: 'user-1',
     farmId: 'farm-1',
     cases: [
@@ -125,7 +125,7 @@ beforeEach(() => {
     ],
   });
 
-  remote.set('treatments-farm-1.json', {
+  mockRemote.set('treatments-farm-1.json', {
     ownerId: 'user-1',
     farmId: 'farm-1',
     treatments: [
@@ -141,7 +141,7 @@ beforeEach(() => {
     ],
   });
 
-  remote.set('diagnoses-farm-1.json', {
+  mockRemote.set('diagnoses-farm-1.json', {
     ownerId: 'user-1',
     farmId: 'farm-1',
     records: [
@@ -162,7 +162,7 @@ beforeEach(() => {
     ],
   });
 
-  remote.set('marketplace.json', {
+  mockRemote.set('marketplace.json', {
     ownerId: 'user-1',
     listings: [
       {
@@ -197,7 +197,7 @@ describe('complete MetlholoAI workspace recovery', () => {
 
     for (const [type, id] of expected) {
       const records = JSON.parse(
-        storage.get(
+        mockStorage.get(
           'metlholoai.farmRecords.user-1.farm-1.' + type,
         ) ?? '[]',
       ) as Array<{ id: string }>;
@@ -210,7 +210,7 @@ describe('complete MetlholoAI workspace recovery', () => {
       ['diagnoses', 'diagnosis-1'],
     ]) {
       const records = JSON.parse(
-        storage.get(
+        mockStorage.get(
           'metlholoai.' + domain + '.user-1.farm-1',
         ) ?? '[]',
       ) as Array<{ id: string }>;
@@ -218,13 +218,13 @@ describe('complete MetlholoAI workspace recovery', () => {
     }
 
     const listings = JSON.parse(
-      storage.get('metlholoai.marketplace.user-1') ?? '[]',
+      mockStorage.get('metlholoai.marketplace.user-1') ?? '[]',
     ) as Array<{ id: string }>;
     expect(listings.some(item => item.id === 'listing-1')).toBe(true);
   });
 
   it('keeps unsynced local records and backfills them to Google Drive after reconnect', async () => {
-    storage.set(
+    mockStorage.set(
       'metlholoai.farmRecords.user-1.farm-1.tasks',
       JSON.stringify([
         {
@@ -236,7 +236,7 @@ describe('complete MetlholoAI workspace recovery', () => {
 
     await restoreWorkspaceFromDrive('user-1');
 
-    const farmData = remote.get('farm-data.json') as {
+    const farmData = mockRemote.get('farm-data.json') as {
       records: Record<string, { tasks: Array<{ id: string }> }>;
     };
     expect(
@@ -245,7 +245,7 @@ describe('complete MetlholoAI workspace recovery', () => {
   });
 
   it('does not silently mix a foreign owner into the signed-in workspace', async () => {
-    remote.set('profile.json', {
+    mockRemote.set('profile.json', {
       uid: 'different-user',
       onboardingCompleted: true,
     });
@@ -254,6 +254,6 @@ describe('complete MetlholoAI workspace recovery', () => {
       restoreWorkspaceFromDrive('user-1'),
     ).rejects.toThrow('different MetlholoAI account');
 
-    expect(storage.size).toBe(0);
+    expect(mockStorage.size).toBe(0);
   });
 });

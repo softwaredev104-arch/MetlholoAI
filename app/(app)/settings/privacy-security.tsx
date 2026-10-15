@@ -24,7 +24,9 @@ export default function PrivacySecurity() {
     setWorking(true);
     setMessage('');
     try {
-      await driveAuthService.connect();
+      await driveAuthService.connect({
+        ownerId: firebaseUser?.uid,
+      });
       setDriveConnected(true);
       setMessage('Google Drive access connected for this session.');
     } catch (error) {
@@ -45,10 +47,12 @@ export default function PrivacySecurity() {
         {
           text: 'Disconnect',
           style: 'destructive',
-          onPress: () => {
-            driveAuthService.disconnect();
+          onPress: async () => {
+            await driveAuthService.disconnect(firebaseUser?.uid);
             setDriveConnected(false);
-            setMessage('Google Drive disconnected for this session.');
+            setMessage(
+              'Google Drive disconnected. Automatic reconnection has also been disabled until you connect it again.',
+            );
           },
         },
       ],

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
+import { driveAuthService } from '@/services/drive/driveAuthService';
 
 export type TreatmentRecord = {
   id: string;
@@ -48,7 +49,7 @@ async function persist(
   treatments: TreatmentRecord[],
 ) {
   await AsyncStorage.setItem(key(ownerId, farmId), JSON.stringify(treatments));
-  if (driveJsonStore.isConnected()) {
+  if (await driveAuthService.ensureConnected(ownerId)) {
     await driveJsonStore.writeJson(driveFile(farmId), {
       ownerId,
       farmId,

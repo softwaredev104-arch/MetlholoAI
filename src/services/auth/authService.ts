@@ -12,7 +12,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/services/firebase/client';
-import { createInitialUserProfile, getUserProfile } from '@/services/auth/userProfileService';
+import { createInitialUserProfile } from '@/services/auth/userProfileService';
 import { googleDriveClientId } from '@/config/env';
 import type { Role } from '@/types/user';
 
@@ -41,19 +41,6 @@ declare global {
 }
 
 let googleIdentityLoader: Promise<void> | null = null;
-
-async function ensureGoogleUserProfile(user: User) {
-  const existing = await getUserProfile(user.uid);
-  if (existing) return existing;
-
-  return createInitialUserProfile({
-    uid: user.uid,
-    displayName: user.displayName?.trim() || user.email?.split('@')[0] || 'Farmer',
-    email: user.email ?? '',
-    photoURL: user.photoURL,
-    role: 'FARMER',
-  });
-}
 
 function loadGoogleIdentityServices() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -150,6 +137,7 @@ async function getGoogleAccessToken() {
 }
 
 export const authService = {
+  currentUser() { return getFirebaseAuth().currentUser; },
   subscribe(listener: (user: User | null) => void) {
     return onAuthStateChanged(getFirebaseAuth(), listener);
   },
@@ -177,7 +165,8 @@ export const authService = {
       ),
     ]);
 
-    await ensureGoogleUserProfile(credential.user);
+    // The Firebase UID is the identity. A missing local profile must first
+    // be checked against Google Drive before onboarding creates new state.
     return credential.user;
   },
 

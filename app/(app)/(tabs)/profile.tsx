@@ -23,7 +23,7 @@ type SettingsItem = {
 };
 
 export default function Profile() {
-  const { firebaseUser, profile } = useAuth();
+  const { firebaseUser, profile, refreshProfile } = useAuth();
   const { farm } = usePrimaryFarm();
   const { colors } = useTheme();
   const [driveConnected, setDriveConnected] = useState(

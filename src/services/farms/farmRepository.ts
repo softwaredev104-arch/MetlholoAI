@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
+import { driveAuthService } from '@/services/drive/driveAuthService';
 
 export type FarmRecordType = 'animals' | 'crops' | 'healthRecords' | 'tasks' | 'feedingPlans' | 'marketplace';
 
@@ -22,7 +23,7 @@ async function writeList<T>(key: string, value: T[]) {
   await AsyncStorage.setItem(key, JSON.stringify(value));
 }
 async function sync(ownerId: string) {
-  if (!driveJsonStore.isConnected()) return;
+  if (!(await driveAuthService.ensureConnected(ownerId))) return;
   const farms = await listFarms(ownerId);
   const records: Record<string, Partial<Record<FarmRecordType, FarmRecord[]>>> = {};
   for (const farm of farms) {

@@ -1,5 +1,5 @@
 import { PropsWithChildren, useEffect } from 'react';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { AppLoadingState } from '@/components/ui/AppLoadingState';
 import { useAuth } from '@/auth/AuthProvider';
 
@@ -36,12 +36,21 @@ export function OnboardingRoute({ children }: PropsWithChildren) {
 
 export function PublicRoute({ children }: PropsWithChildren) {
   const { status } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (status === 'AUTHENTICATED') router.replace('/(app)/(tabs)');
-    else if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
-    else if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
-  }, [status]);
+    else if (
+      status === 'DATA_RECOVERY_REQUIRED' &&
+      !pathname.includes('restore-data')
+    ) {
+      router.replace('/(auth)/restore-data');
+    } else if (status === 'PROFILE_INCOMPLETE') {
+      router.replace('/(onboarding)/profile');
+    } else if (status === 'ACCOUNT_SUSPENDED') {
+      router.replace('/suspended');
+    }
+  }, [pathname, status]);
 
   if (status === 'AUTHENTICATING') return <AppLoadingState />;
   return children;

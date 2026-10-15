@@ -22,7 +22,7 @@ type SettingsItem = {
 };
 
 export default function Profile() {
-  const { profile } = useAuth();
+  const { firebaseUser, profile } = useAuth();
   const { farm } = usePrimaryFarm();
   const { colors } = useTheme();
   const [driveConnected, setDriveConnected] = useState(
@@ -33,7 +33,9 @@ export default function Profile() {
   async function connectDrive() {
     setConnecting(true);
     try {
-      await driveAuthService.connect();
+      await driveAuthService.connect({
+        ownerId: firebaseUser?.uid,
+      });
       setDriveConnected(true);
     } finally {
       setConnecting(false);

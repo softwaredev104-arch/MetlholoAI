@@ -1,5 +1,4 @@
 const mockStorage = new Map<string, string>();
-const mockReadJson = jest.fn();
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
@@ -17,12 +16,16 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('@/services/drive/driveJsonStore', () => ({
   driveJsonStore: {
     isConnected: jest.fn(() => true),
-    readJson: mockReadJson,
+    readJson: jest.fn(),
     writeJson: jest.fn(),
   },
 }));
 
-import { getUserProfile, restoreUserProfileFromDrive } from '@/services/auth/userProfileService';
+import { driveJsonStore } from '@/services/drive/driveJsonStore';
+import {
+  getUserProfile,
+  restoreUserProfileFromDrive,
+} from '@/services/auth/userProfileService';
 import {
   listFarmRecords,
   listFarms,
@@ -30,6 +33,8 @@ import {
   type Farm,
   type FarmRecord,
 } from '@/services/farms/farmRepository';
+
+const mockReadJson = driveJsonStore.readJson as jest.Mock;
 
 describe('Google Drive workspace recovery', () => {
   beforeEach(() => {

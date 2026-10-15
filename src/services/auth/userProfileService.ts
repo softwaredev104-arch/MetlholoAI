@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Role, UserProfile } from '@/types/user';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
+import { driveAuthService } from '@/services/drive/driveAuthService';
 
 const key = (uid: string) => `metlholoai.profile.${uid}`;
 
@@ -56,7 +57,7 @@ export async function updateUserProfile(
 
   await AsyncStorage.setItem(key(uid), JSON.stringify(next));
 
-  if (driveJsonStore.isConnected()) {
+  if (await driveAuthService.ensureConnected(uid)) {
     await driveJsonStore.writeJson('profile.json', next);
   }
 
@@ -66,6 +67,9 @@ export async function updateUserProfile(
 export async function syncUserProfileToDrive(uid: string) {
   const profile = await getUserProfile(uid);
   if (!profile) throw new Error('User profile is not initialized.');
+  if (!(await driveAuthService.ensureConnected(uid))) {
+    throw new Error('Google Drive could not be reconnected.');
+  }
   await driveJsonStore.writeJson('profile.json', profile);
 }
 

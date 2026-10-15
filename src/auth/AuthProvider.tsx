@@ -1,7 +1,18 @@
-import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  PropsWithChildren,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { User } from 'firebase/auth';
 import { authService } from '@/services/auth/authService';
-import { createInitialUserProfile, getUserProfile } from '@/services/auth/userProfileService';
+import {
+  createInitialUserProfile,
+  getUserProfile,
+} from '@/services/auth/userProfileService';
+import { driveAuthService } from '@/services/drive/driveAuthService';
 import { isFirebaseConfigured } from '@/config/env';
 import type { UserProfile } from '@/types/user';
 
@@ -11,6 +22,7 @@ export type AuthStatus =
   | 'AUTHENTICATED'
   | 'EMAIL_VERIFICATION_REQUIRED'
   | 'PROFILE_INCOMPLETE'
+  | 'RECOVERY_REQUIRED'
   | 'ACCOUNT_SUSPENDED';
 
 type AuthContextValue = {
@@ -18,20 +30,15 @@ type AuthContextValue = {
   profile: UserProfile | null;
   status: AuthStatus;
   refreshProfile: () => Promise<void>;
+  startNewProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function ensureLocalProfile(user: User) {
-  const existing = await getUserProfile(user.uid);
-  if (existing) return existing;
-  return createInitialUserProfile({
-    uid: user.uid,
-    displayName: user.displayName ?? user.email?.split('@')[0] ?? 'Farmer',
-    email: user.email ?? '',
-    photoURL: user.photoURL,
-    role: 'FARMER',
-  });
+function classifyProfile(next: UserProfile): AuthStatus {
+  if (next.status === 'suspended') return 'ACCOUNT_SUSPENDED';
+  if (!next.onboardingCompleted) return 'PROFILE_INCOMPLETE';
+  return 'AUTHENTICATED';
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -41,41 +48,70 @@ export function AuthProvider({ children }: PropsWithChildren) {
     isFirebaseConfigured ? 'AUTHENTICATING' : 'UNAUTHENTICATED',
   );
 
-  const applyProfile = (next: UserProfile) => {
+  const applyProfile = (next: UserProfile | null) => {
     setProfile(next);
-    if (next.status === 'suspended') setStatus('ACCOUNT_SUSPENDED');
-    else if (!next.onboardingCompleted) setStatus('PROFILE_INCOMPLETE');
-    else setStatus('AUTHENTICATED');
+    // An existing Firebase identity with no local profile may have a Drive
+    // backup. Do not silently create a new farmer and lose the old workspace.
+    setStatus(next ? classifyProfile(next) : 'RECOVERY_REQUIRED');
   };
 
   const refreshProfile = async () => {
-    if (!firebaseUser) return;
-    applyProfile(await ensureLocalProfile(firebaseUser));
+    const user = authService.currentUser();
+    if (!user) return;
+    applyProfile(await getUserProfile(user.uid));
+  };
+
+  const startNewProfile = async () => {
+    const user = authService.currentUser();
+    if (!user) throw new Error('Please sign in to continue.');
+    const existing = await getUserProfile(user.uid);
+    const next = existing ?? await createInitialUserProfile({
+      uid: user.uid,
+      displayName: user.displayName?.trim() || user.email?.split('@')[0] || 'Farmer',
+      email: user.email ?? '',
+      photoURL: user.photoURL,
+      role: 'FARMER',
+    });
+    applyProfile(next);
   };
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
-    return authService.subscribe(async user => {
+    let active = true;
+    let sequence = 0;
+    const unsubscribe = authService.subscribe(async user => {
+      const cycle = ++sequence;
+      if (!active) return;
       setFirebaseUser(user);
       setProfile(null);
       if (!user) {
+        driveAuthService.clearSession();
         setStatus('UNAUTHENTICATED');
         return;
       }
+      setStatus('AUTHENTICATING');
       if (!user.emailVerified) {
         setStatus('EMAIL_VERIFICATION_REQUIRED');
         return;
       }
       try {
-        applyProfile(await ensureLocalProfile(user));
+        const current = await getUserProfile(user.uid);
+        if (active && cycle === sequence) applyProfile(current);
       } catch {
-        setStatus('PROFILE_INCOMPLETE');
+        if (active && cycle === sequence) applyProfile(null);
       }
     });
+    return () => {
+      active = false;
+      ++sequence;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo(
-    () => ({ firebaseUser, profile, status, refreshProfile }),
+    () => ({
+      firebaseUser, profile, status, refreshProfile, startNewProfile,
+    }),
     [firebaseUser, profile, status],
   );
 

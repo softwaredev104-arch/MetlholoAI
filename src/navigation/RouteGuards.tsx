@@ -9,6 +9,7 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
   useEffect(() => {
     if (status === 'UNAUTHENTICATED') router.replace('/(auth)/welcome');
     else if (status === 'EMAIL_VERIFICATION_REQUIRED') router.replace('/(auth)/verify-email');
+    else if (status === 'DATA_RECOVERY_REQUIRED') router.replace('/(auth)/restore-data');
     else if (status === 'PROFILE_INCOMPLETE') router.replace('/(onboarding)/profile');
     else if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
   }, [status]);
@@ -23,6 +24,7 @@ export function OnboardingRoute({ children }: PropsWithChildren) {
   useEffect(() => {
     if (status === 'UNAUTHENTICATED') router.replace('/(auth)/welcome');
     else if (status === 'EMAIL_VERIFICATION_REQUIRED') router.replace('/(auth)/verify-email');
+    else if (status === 'DATA_RECOVERY_REQUIRED') router.replace('/(auth)/restore-data');
     else if (status === 'ACCOUNT_SUSPENDED') router.replace('/suspended');
     else if (status === 'AUTHENTICATED') router.replace('/(app)/(tabs)');
   }, [status]);

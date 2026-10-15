@@ -12,7 +12,8 @@ import {
   type User,
 } from 'firebase/auth';
 import { getFirebaseAuth } from '@/services/firebase/client';
-import { createInitialUserProfile, getUserProfile } from '@/services/auth/userProfileService';
+import { createInitialUserProfile } from '@/services/auth/userProfileService';
+import { driveAuthService } from '@/services/drive/driveAuthService';
 import { googleDriveClientId } from '@/config/env';
 import type { Role } from '@/types/user';
 
@@ -40,20 +41,10 @@ declare global {
   }
 }
 
+const GOOGLE_SIGN_IN_SCOPE =
+  'openid email profile https://www.googleapis.com/auth/drive.file';
+
 let googleIdentityLoader: Promise<void> | null = null;
-
-async function ensureGoogleUserProfile(user: User) {
-  const existing = await getUserProfile(user.uid);
-  if (existing) return existing;
-
-  return createInitialUserProfile({
-    uid: user.uid,
-    displayName: user.displayName?.trim() || user.email?.split('@')[0] || 'Farmer',
-    email: user.email ?? '',
-    photoURL: user.photoURL,
-    role: 'FARMER',
-  });
-}
 
 function loadGoogleIdentityServices() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') {
@@ -90,7 +81,8 @@ function loadGoogleIdentityServices() {
     script.defer = true;
     script.dataset.metlholoGoogleIdentity = 'true';
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Google Identity Services failed to load.'));
+    script.onerror = () =>
+      reject(new Error('Google Identity Services failed to load.'));
     document.head.appendChild(script);
   });
 
@@ -100,53 +92,58 @@ function loadGoogleIdentityServices() {
 async function getGoogleAccessToken() {
   await loadGoogleIdentityServices();
 
-  return new Promise<string>((resolve, reject) => {
-    let settled = false;
+  return new Promise<{ accessToken: string; expiresIn: number }>(
+    (resolve, reject) => {
+      let settled = false;
 
-    const finishError = (message: string) => {
-      if (settled) return;
-      settled = true;
-      reject(new Error(message));
-    };
-
-    const timeout = setTimeout(() => {
-      finishError(
-        'Google sign-in did not finish. Please try again and keep the Google account window open until it closes.',
-      );
-    }, 20_000);
-
-    const client = window.google!.accounts!.oauth2!.initTokenClient({
-      client_id: googleDriveClientId,
-      scope: 'openid email profile',
-      callback: response => {
+      const finishError = (message: string) => {
         if (settled) return;
-        clearTimeout(timeout);
-
-        if (response.error || !response.access_token) {
-          settled = true;
-          reject(
-            new Error(
-              response.error_description ??
-                response.error ??
-                'Google sign-in did not return an access token.',
-            ),
-          );
-          return;
-        }
-
         settled = true;
-        resolve(response.access_token);
-      },
-      error_callback: error => {
-        clearTimeout(timeout);
-        finishError(
-          `Google sign-in popup error: ${error.type ?? 'unknown_error'}.`,
-        );
-      },
-    });
+        reject(new Error(message));
+      };
 
-    client.requestAccessToken({ prompt: 'select_account' });
-  });
+      const timeout = setTimeout(() => {
+        finishError(
+          'Google sign-in did not finish. Please try again and keep the Google account window open until it closes.',
+        );
+      }, 20_000);
+
+      const client = window.google!.accounts!.oauth2!.initTokenClient({
+        client_id: googleDriveClientId,
+        scope: GOOGLE_SIGN_IN_SCOPE,
+        callback: response => {
+          if (settled) return;
+          clearTimeout(timeout);
+
+          if (response.error || !response.access_token) {
+            settled = true;
+            reject(
+              new Error(
+                response.error_description ??
+                  response.error ??
+                  'Google sign-in did not return an access token.',
+              ),
+            );
+            return;
+          }
+
+          settled = true;
+          resolve({
+            accessToken: response.access_token,
+            expiresIn: response.expires_in ?? 3600,
+          });
+        },
+        error_callback: error => {
+          clearTimeout(timeout);
+          finishError(
+            `Google sign-in popup error: ${error.type ?? 'unknown_error'}.`,
+          );
+        },
+      });
+
+      client.requestAccessToken({ prompt: 'select_account' });
+    },
+  );
 }
 
 export const authService = {
@@ -155,7 +152,13 @@ export const authService = {
   },
 
   async signIn(email: string, password: string) {
-    return (await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password)).user;
+    return (
+      await signInWithEmailAndPassword(
+        getFirebaseAuth(),
+        email.trim(),
+        password,
+      )
+    ).user;
   },
 
   async signInWithGoogle() {
@@ -165,23 +168,43 @@ export const authService = {
       );
     }
 
-    const accessToken = await getGoogleAccessToken();
-    const firebaseCredential = GoogleAuthProvider.credential(null, accessToken);
+    const googleToken = await getGoogleAccessToken();
+    const firebaseCredential = GoogleAuthProvider.credential(
+      null,
+      googleToken.accessToken,
+    );
+
     const credential = await Promise.race([
       signInWithCredential(getFirebaseAuth(), firebaseCredential),
       new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error('Firebase sign-in timed out. Please try again.')),
+          () =>
+            reject(
+              new Error('Firebase sign-in timed out. Please try again.'),
+            ),
           15_000,
         ),
       ),
     ]);
 
-    await ensureGoogleUserProfile(credential.user);
+    await driveAuthService.adoptAccessToken(
+      googleToken.accessToken,
+      googleToken.expiresIn,
+      {
+        ownerId: credential.user.uid,
+        expectedEmail: credential.user.email,
+      },
+    );
+
     return credential.user;
   },
 
-  async signUp(email: string, password: string, displayName: string, role: Role) {
+  async signUp(
+    email: string,
+    password: string,
+    displayName: string,
+    role: Role,
+  ) {
     const credential = await createUserWithEmailAndPassword(
       getFirebaseAuth(),
       email.trim(),

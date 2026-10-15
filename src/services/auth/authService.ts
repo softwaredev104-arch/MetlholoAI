@@ -169,6 +169,11 @@ export const authService = {
     }
 
     const googleToken = await getGoogleAccessToken();
+    await driveAuthService.adoptAccessToken(
+      googleToken.accessToken,
+      googleToken.expiresIn,
+    );
+
     const firebaseCredential = GoogleAuthProvider.credential(
       null,
       googleToken.accessToken,

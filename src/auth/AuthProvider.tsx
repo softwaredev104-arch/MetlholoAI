@@ -96,6 +96,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const restoredOrLocal = await getUserProfile(user.uid);
     if (restoredOrLocal) {
+      const existingFarms = await listFarms(user.uid);
+      // A prior completed profile without its farms must not be treated as a
+      // newly empty farm workspace. Ask for recovery before allowing writes.
+      if (restoredOrLocal.onboardingCompleted && existingFarms.length === 0) {
+        return null;
+      }
+      if (!restoredOrLocal.onboardingCompleted && rememberedGrant &&
+          !driveAuthService.isConnected() && isReturningUser(user)) {
+        return null;
+      }
       return restoredOrLocal;
     }
 

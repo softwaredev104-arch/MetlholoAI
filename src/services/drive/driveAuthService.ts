@@ -298,9 +298,12 @@ export const driveAuthService = {
     return acceptToken(token, expiresIn, options);
   },
 
-  async ensureConnected(ownerId: string) {
-    if (this.isConnected()) return true;
-    return this.restore({ ownerId });
+  async ensureConnected(_ownerId: string) {
+    // Farm repositories may save locally while a token is expired. Do not
+    // silently renew here and overwrite an older cloud snapshot before the
+    // returning-user reconciliation has run. Reauthorization and restore
+    // happen in AuthProvider or from the explicit Profile/Recovery action.
+    return this.isConnected();
   },
 
   async disconnect(ownerId?: string) {

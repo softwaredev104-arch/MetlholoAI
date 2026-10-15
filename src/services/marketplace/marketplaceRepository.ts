@@ -53,6 +53,27 @@ export async function listMyMarketplaceListings(
   return read(ownerId);
 }
 
+export async function restoreMarketplaceFromDrive(ownerId: string) {
+  if (!driveJsonStore.isConnected()) return [] as MarketplaceListing[];
+
+  const remote = await driveJsonStore.readJson<{
+    ownerId?: string;
+    listings?: MarketplaceListing[];
+  }>('marketplace.json');
+
+  if (
+    !remote ||
+    remote.ownerId !== ownerId ||
+    !Array.isArray(remote.listings)
+  ) {
+    return [] as MarketplaceListing[];
+  }
+
+  const listings = remote.listings.filter(item => item.ownerId === ownerId);
+  await AsyncStorage.setItem(key(ownerId), JSON.stringify(listings));
+  return listings;
+}
+
 export async function createMarketplaceListing(
   ownerId: string,
   input: Omit<MarketplaceListing, 'id' | 'ownerId' | 'createdAt'>,

@@ -240,7 +240,7 @@ describe('complete MetlholoAI workspace recovery', () => {
       records: Record<string, { tasks: Array<{ id: string }> }>;
     };
     expect(
-      farmData.records['farm-1'].tasks.map(item => item.id).sort(),
+      farmData.records['farm-1']?.tasks.map(item => item.id).sort(),
     ).toEqual(['task-1', 'task-local']);
   });
 

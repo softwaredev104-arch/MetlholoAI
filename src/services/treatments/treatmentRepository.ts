@@ -30,6 +30,7 @@ export type TreatmentRecord = {
 
 const key = (ownerId: string, farmId: string) =>
   'metlholoai.treatments.' + ownerId + '.' + farmId;
+const driveFile = (farmId: string) => `treatments-${farmId}.json`;
 
 async function read(ownerId: string, farmId: string): Promise<TreatmentRecord[]> {
   const raw = await AsyncStorage.getItem(key(ownerId, farmId));
@@ -48,7 +49,7 @@ async function persist(
 ) {
   await AsyncStorage.setItem(key(ownerId, farmId), JSON.stringify(treatments));
   if (driveJsonStore.isConnected()) {
-    await driveJsonStore.writeJson('treatments.json', {
+    await driveJsonStore.writeJson(driveFile(farmId), {
       ownerId,
       farmId,
       treatments,
@@ -59,6 +60,46 @@ async function persist(
 
 export async function listTreatments(ownerId: string, farmId: string) {
   return read(ownerId, farmId);
+}
+
+export async function restoreTreatmentsFromDrive(
+  ownerId: string,
+  farmId: string,
+) {
+  if (!driveJsonStore.isConnected()) return [] as TreatmentRecord[];
+
+  let remote = await driveJsonStore.readJson<{
+    ownerId?: string;
+    farmId?: string;
+    treatments?: TreatmentRecord[];
+  }>(driveFile(farmId));
+
+  if (!remote) {
+    const legacy = await driveJsonStore.readJson<{
+      ownerId?: string;
+      farmId?: string;
+      treatments?: TreatmentRecord[];
+    }>('treatments.json');
+    if (legacy?.farmId === farmId) remote = legacy;
+  }
+
+  if (
+    !remote ||
+    remote.ownerId !== ownerId ||
+    remote.farmId !== farmId ||
+    !Array.isArray(remote.treatments)
+  ) {
+    return [] as TreatmentRecord[];
+  }
+
+  const treatments = remote.treatments.filter(
+    item => item.ownerId === ownerId && item.farmId === farmId,
+  );
+  await AsyncStorage.setItem(
+    key(ownerId, farmId),
+    JSON.stringify(treatments),
+  );
+  return treatments;
 }
 
 export async function createTreatment(

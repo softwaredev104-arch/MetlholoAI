@@ -101,7 +101,22 @@ describe('returning user recovery', () => {
     expect(cases[0]?.id).toBe('case-drive');
     const profile = JSON.parse(mockItems.get('metlholoai.profile.uid-123') ?? '{}');
     expect(profile.onboardingCompleted).toBe(true);
-    expect(driveJsonStore.writeJson).not.toHaveBeenCalled();
+    // Existing Drive data and previously unsynced local records are merged
+    // before being synchronized back to cloud storage.
+    expect(driveJsonStore.writeJson).toHaveBeenCalledWith(
+      'farm-data.json',
+      expect.objectContaining({
+        ownerId: user.uid,
+        records: expect.objectContaining({
+          'farm-1': expect.objectContaining({
+            animals: expect.arrayContaining([
+              expect.objectContaining({ id: 'animal-local' }),
+              expect.objectContaining({ id: 'animal-drive' }),
+            ]),
+          }),
+        }),
+      }),
+    );
   });
 
   it('rejects another Firebase UID without writing any local data', async () => {

@@ -26,6 +26,7 @@ export type FarmCase = {
 
 const key = (ownerId: string, farmId: string) =>
   'metlholoai.cases.' + ownerId + '.' + farmId;
+const driveFile = (farmId: string) => `cases-${farmId}.json`;
 
 async function read(ownerId: string, farmId: string): Promise<FarmCase[]> {
   const raw = await AsyncStorage.getItem(key(ownerId, farmId));
@@ -40,7 +41,7 @@ async function read(ownerId: string, farmId: string): Promise<FarmCase[]> {
 async function persist(ownerId: string, farmId: string, cases: FarmCase[]) {
   await AsyncStorage.setItem(key(ownerId, farmId), JSON.stringify(cases));
   if (driveJsonStore.isConnected()) {
-    await driveJsonStore.writeJson('cases.json', {
+    await driveJsonStore.writeJson(driveFile(farmId), {
       ownerId,
       farmId,
       cases,
@@ -51,6 +52,40 @@ async function persist(ownerId: string, farmId: string, cases: FarmCase[]) {
 
 export async function listCases(ownerId: string, farmId: string) {
   return read(ownerId, farmId);
+}
+
+export async function restoreCasesFromDrive(ownerId: string, farmId: string) {
+  if (!driveJsonStore.isConnected()) return [] as FarmCase[];
+
+  let remote = await driveJsonStore.readJson<{
+    ownerId?: string;
+    farmId?: string;
+    cases?: FarmCase[];
+  }>(driveFile(farmId));
+
+  if (!remote) {
+    const legacy = await driveJsonStore.readJson<{
+      ownerId?: string;
+      farmId?: string;
+      cases?: FarmCase[];
+    }>('cases.json');
+    if (legacy?.farmId === farmId) remote = legacy;
+  }
+
+  if (
+    !remote ||
+    remote.ownerId !== ownerId ||
+    remote.farmId !== farmId ||
+    !Array.isArray(remote.cases)
+  ) {
+    return [] as FarmCase[];
+  }
+
+  const cases = remote.cases.filter(
+    item => item.ownerId === ownerId && item.farmId === farmId,
+  );
+  await AsyncStorage.setItem(key(ownerId, farmId), JSON.stringify(cases));
+  return cases;
 }
 
 export async function createCase(

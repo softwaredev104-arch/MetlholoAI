@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
 import { useAuth } from '@/auth/AuthProvider';
+import { restoreWorkspaceFromDrive } from '@/services/drive/workspaceRecovery';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import { authService } from '@/services/auth/authService';
 import { driveAuthService } from '@/services/drive/driveAuthService';
@@ -22,19 +23,37 @@ type SettingsItem = {
 };
 
 export default function Profile() {
-  const { profile } = useAuth();
+  const { profile, firebaseUser, refreshProfile } = useAuth();
   const { farm } = usePrimaryFarm();
   const { colors } = useTheme();
   const [driveConnected, setDriveConnected] = useState(
     driveAuthService.isConnected(),
   );
   const [connecting, setConnecting] = useState(false);
+  const [previouslyConnected, setPreviouslyConnected] = useState(false);
+  const [driveMessage, setDriveMessage] = useState('');
 
-  async function connectDrive() {
+  useEffect(() => {
+    if (firebaseUser) {
+      void driveAuthService.wasPreviouslyConnected(firebaseUser.uid).then(setPreviouslyConnected);
+    }
+  }, [firebaseUser?.uid]);
+
+  async function connectDrive(forceConsent = false) {
+    if (!firebaseUser) return;
     setConnecting(true);
+    setDriveMessage('');
     try {
-      await driveAuthService.connect();
+      await driveAuthService.connect({ forceConsent, preferExistingGrant: previouslyConnected });
+      const result = await restoreWorkspaceFromDrive(firebaseUser);
+      await refreshProfile();
       setDriveConnected(true);
+      setPreviouslyConnected(true);
+      setDriveMessage(result.found
+        ? 'Google Drive restored: ' + result.farms + ' farms and ' + result.records + ' records. Reopen Farm to refresh its view.'
+        : 'Google Drive connected. No prior MetlholoAI backup was found in this account.');
+    } catch (e) {
+      setDriveMessage(e instanceof Error ? e.message : 'Could not restore Google Drive.');
     } finally {
       setConnecting(false);
     }
@@ -153,11 +172,19 @@ export default function Profile() {
         </View>
         {!driveConnected ? (
           <AppButton
-            title="Reconnect Google Drive"
+            title={previouslyConnected ? 'Restore Google Drive data' : 'Connect Google Drive'}
             variant="secondary"
-            onPress={connectDrive}
+            onPress={() => connectDrive()}
             loading={connecting}
           />
+        ) : null}
+        {driveMessage ? (
+          <AppText variant="footnote" style={{ color: colors.textSecondary }}>
+            {driveMessage}
+          </AppText>
+        ) : null}
+        {!driveConnected && driveMessage ? (
+          <AppButton title="Grant Drive access" variant="ghost" onPress={() => connectDrive(true)} />
         ) : null}
       </AppCard>
 

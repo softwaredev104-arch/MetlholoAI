@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
+import { driveAuthService } from '@/services/drive/driveAuthService';
 
 export type MarketplaceListing = {
   id: string;
@@ -38,7 +39,7 @@ async function read(ownerId: string): Promise<MarketplaceListing[]> {
 
 async function persist(ownerId: string, items: MarketplaceListing[]) {
   await AsyncStorage.setItem(key(ownerId), JSON.stringify(items));
-  if (driveJsonStore.isConnected()) {
+  if (await driveAuthService.ensureConnected(ownerId)) {
     await driveJsonStore.writeJson('marketplace.json', {
       ownerId,
       listings: items,

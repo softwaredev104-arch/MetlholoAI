@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirebaseAuth } from '@/services/firebase/client';
+import type { User } from 'firebase/auth';
 import { getUserProfile } from '@/services/auth/userProfileService';
 import { listFarms } from '@/services/farms/farmRepository';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
@@ -104,7 +105,7 @@ export async function restoreWorkspaceFromDrive(uid: string): Promise<{ profile:
   };
 }
 
-async function safelyRestoreWorkspace(user: NonNullable<ReturnType<typeof getFirebaseAuth>['currentUser']>>): Promise<RecoveryResult> {
+async function safelyRestoreWorkspace(user: User): Promise<RecoveryResult> {
   if (!driveJsonStore.isConnected()) {
     throw new Error('Connect the same Google Drive account before restoring.');
   }

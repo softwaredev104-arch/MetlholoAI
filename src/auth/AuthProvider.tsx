@@ -73,7 +73,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const bootstrapUser = async (user: User) => {
-    const localProfile = await getUserProfile(user.uid);
     const googleUser = isGoogleUser(user);
     const rememberedGrant = await driveAuthService.hasRememberedGrant(user.uid);
 

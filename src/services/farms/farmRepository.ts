@@ -38,6 +38,52 @@ export async function listFarms(ownerId: string): Promise<Farm[]> {
   return readList<Farm>(farmsKey(ownerId));
 }
 
+export async function restoreFarmDataFromDrive(ownerId: string) {
+  if (!driveJsonStore.isConnected()) return [] as Farm[];
+
+  const remote = await driveJsonStore.readJson<{
+    ownerId?: string;
+    farms?: Farm[];
+    records?: Record<
+      string,
+      Partial<Record<FarmRecordType, FarmRecord[]>>
+    >;
+  }>('farm-data.json');
+
+  if (!remote || remote.ownerId !== ownerId || !Array.isArray(remote.farms)) {
+    return [] as Farm[];
+  }
+
+  const farms = remote.farms.filter(farm => farm.ownerId === ownerId);
+  await writeList(farmsKey(ownerId), farms);
+
+  const types = [
+    'animals',
+    'crops',
+    'healthRecords',
+    'tasks',
+    'feedingPlans',
+    'marketplace',
+  ] as FarmRecordType[];
+
+  for (const farm of farms) {
+    const byType = remote.records?.[farm.id] ?? {};
+    for (const type of types) {
+      const records = Array.isArray(byType[type])
+        ? (byType[type] as FarmRecord[]).filter(
+            record =>
+              record.ownerId === ownerId &&
+              record.farmId === farm.id &&
+              record.type === type,
+          )
+        : [];
+      await writeList(recordsKey(ownerId, farm.id, type), records);
+    }
+  }
+
+  return farms;
+}
+
 export async function setPrimaryFarm(ownerId: string, farmId: string) {
   const farms = await listFarms(ownerId);
   const selected = farms.find(item => item.id === farmId);

@@ -69,7 +69,7 @@ def proposed_manifest(
     *, model_id: str, weights_name: str, weights_sha256: str, labels_name: str,
     data_revision: str, classes: list[str], counts: dict[str, int],
     metrics: dict[str, float], crop_names: list[str], training_seed: int,
-    epochs: int,
+    epochs: int, initialization: str = "from_scratch",
 ) -> dict[str, Any]:
     """Output is non-ready until operator reviews permissions and real weights."""
     if not SAFE_MODEL_ID.fullmatch(model_id):
@@ -107,6 +107,8 @@ def proposed_manifest(
         "evaluation": metrics,
         "seed": training_seed,
         "epochs": epochs,
+        "initialization": initialization,
+        "transfer_learning_requires_independent_rights_review": initialization != "from_scratch",
         "capture_examples": [],
     }
 
@@ -197,12 +199,24 @@ def train(args: argparse.Namespace) -> Path:
         LeafSplit(testing, test_ids), batch_size=args.batch_size,
         shuffle=False, num_workers=args.workers,
     )
-    # No undocumented pretrained weights are downloaded/redistributed.
-    net = models.mobilenet_v3_small(weights=None)
+    # Optional, EXPLICIT transfer learning using PyTorch's named ImageNet
+    # weights. Retain license_verified=False, including for pretrained runs.
+    if args.backbone == "imagenet1k_v1":
+        weights = models.MobileNet_V3_Small_Weights.IMAGENET1K_V1
+        net = models.mobilenet_v3_small(weights=weights)
+        for parameter in net.features.parameters():
+            parameter.requires_grad_(False)
+        initialization = "torchvision_mobilenet_v3_small_imagenet1k_v1"
+    else:
+        net = models.mobilenet_v3_small(weights=None)
+        initialization = "from_scratch"
     net.classifier[-1] = nn.Linear(net.classifier[-1].in_features, len(classes))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net.to(device)
-    optimizer = torch.optim.AdamW(net.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(
+        (param for param in net.parameters() if param.requires_grad),
+        lr=args.learning_rate,
+    )
     loss_fn = nn.CrossEntropyLoss()
     out = Path(args.output).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -215,7 +229,8 @@ def train(args: argparse.Namespace) -> Path:
         if (state.get("model_id") != args.model_id or
                 state.get("dataset_revision") != args.revision or
                 state.get("classes") != classes or
-                state.get("seed") != args.seed):
+                state.get("seed") != args.seed or
+                state.get("initialization", "from_scratch") != initialization):
             raise ValueError("Checkpoint does not match model, labels, seed and dataset revision")
         net.load_state_dict(state["model_state"])
         optimizer.load_state_dict(state["optimizer_state"])
@@ -226,6 +241,9 @@ def train(args: argparse.Namespace) -> Path:
 
     for epoch in range(start_epoch, args.epochs):
         net.train()
+        if args.backbone == "imagenet1k_v1":
+            # Frozen BatchNorm running statistics must remain fixed.
+            net.features.eval()
         total_loss = 0.0
         for images, targets in train_loader:
             images, targets = images.to(device), targets.to(device)
@@ -243,6 +261,7 @@ def train(args: argparse.Namespace) -> Path:
             "dataset_revision": args.revision,
             "classes": classes,
             "seed": args.seed,
+            "initialization": initialization,
             "epoch": epoch + 1,
         }, checkpoint)
 
@@ -268,7 +287,7 @@ def train(args: argparse.Namespace) -> Path:
         "accuracy": round(accuracy, 6), "test_examples": observed,
         "minimum_accuracy": args.min_test_accuracy,
         "epoch_count": args.epochs,
-        "weights_initialized": "from_scratch",
+        "weights_initialized": initialization,
         "validated_for_botswana": False,
         "license_verified": False,
     }
@@ -300,6 +319,7 @@ def train(args: argparse.Namespace) -> Path:
         classes=classes, counts=dict(counts),
         metrics={"test_accuracy": round(accuracy, 6), "test_examples": observed},
         crop_names=args.crop, training_seed=args.seed, epochs=args.epochs,
+        initialization=initialization,
     )
     manifest_path = out / (args.model_id + ".manifest.json")
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -325,6 +345,9 @@ def parse_args() -> argparse.Namespace:
                     help="Seeded, class-balanced train cap; 0 means all images")
     ap.add_argument("--max-test-per-class", type=int, default=0,
                     help="Seeded, class-balanced held-out cap; 0 means all images")
+    ap.add_argument("--backbone", choices=["scratch", "imagenet1k_v1"],
+                    default="scratch",
+                    help="Explicit ImageNet transfer learning; commercial rights require separate review")
     ap.add_argument("--resume-from", default="",
                     help="Trusted checkpoint from same dataset revision and class order")
     return ap.parse_args()

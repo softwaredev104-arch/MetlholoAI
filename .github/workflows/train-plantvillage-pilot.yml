@@ -7,6 +7,7 @@ on:
     branches: [feat/diagnostics-model-gateway]
     paths:
       - '.github/workflows/train-plantvillage-pilot.yml'
+      - 'services/diagnostics-api/scripts/plantvillage_archive.py'
   workflow_dispatch:
     inputs:
       crop:

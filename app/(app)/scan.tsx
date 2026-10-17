@@ -193,7 +193,7 @@ export default function Scan() {
               result.disease ?? result.prediction ?? 'Unknown',
             ),
             confidence: Math.max(0, Math.min(1, normalizedConfidence)),
-            crop: model.category === 'crops' ? model.subject : undefined,
+            crop: model.category !== 'livestock' ? model.subject : undefined,
             livestock:
               model.category === 'livestock' ? model.subject : undefined,
           }),
@@ -215,7 +215,7 @@ export default function Scan() {
           farmId: farm.id,
           sourceRecordType:
             params.sourceRecordType ??
-            (model.category === 'crops' ? 'crops' : 'animals'),
+            (model.category === 'livestock' ? 'animals' : 'crops'),
           sourceRecordId: params.sourceRecordId ?? 'unlinked',
           sourceName: params.sourceName ?? model.subject,
           modelId: model.id,
@@ -314,7 +314,7 @@ export default function Scan() {
       <View style={styles.categoryGrid}>
         {categoryCards.map(item => {
           const selected = category === item.key;
-          const supported = item.key !== 'soil' && (item.key === 'crops' || item.key === 'livestock' || availableModels.length > 0 || gatewayModels.some(model => model.category === item.key));
+          const supported = item.key !== 'soil' && (item.key === 'crops' || item.key === 'livestock' || gatewayModels.some(model => model.category === item.key));
           return (
             <AppCard
               key={item.key}

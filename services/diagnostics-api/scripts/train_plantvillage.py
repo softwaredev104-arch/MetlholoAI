@@ -1,0 +1,239 @@
+"""Train a REAL PlantVillage crop classifier and export it as an ONNX gateway model.
+
+Dataset provenance: https://github.com/spMohanty/PlantVillage-Dataset
+Mirror with *leaf-disjoint* official splits: mohanty/PlantVillage on Hugging Face.
+This script never labels untrained/random weights as a model, never approves
+licensing automatically, and never claims Botswana field validation.
+Train manually on a machine with enough RAM/compute, outside the static Worker.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import random
+import re
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+DATASET_ID = "mohanty/PlantVillage"
+SOURCE_REPO = "https://github.com/spMohanty/PlantVillage-Dataset"
+CROP_PREFIXES = {
+    "maize": "Corn_(maize)___",
+    "tomato": "Tomato___",
+    "potato": "Potato___",
+    "pepper": "Pepper,_bell___",
+    "grape": "Grape___",
+    "apple": "Apple___",
+}
+SAFE_REVISION = re.compile(r"^[a-f0-9]{40}$")
+SAFE_MODEL_ID = re.compile(r"^[a-z][a-z0-9-]{2,63}$")
+
+
+def select_labels(all_labels: list[str], crops: list[str]) -> list[str]:
+    """Never invent class labels that are absent from the pinned dataset."""
+    if not all_labels or len(set(all_labels)) != len(all_labels):
+        raise ValueError("Invalid/duplicate source class labels")
+    if not crops:
+        return list(all_labels)
+    unknown = set(crops) - CROP_PREFIXES.keys()
+    if unknown:
+        raise ValueError("Unsupported PlantVillage crop: " + ", ".join(sorted(unknown)))
+    prefixes = tuple(CROP_PREFIXES[crop] for crop in crops)
+    chosen = [name for name in all_labels if name.startswith(prefixes)]
+    if not chosen:
+        raise ValueError("Selected crops have no classes in the source dataset")
+    return chosen
+
+
+def proposed_manifest(
+    *, model_id: str, weights_name: str, weights_sha256: str, labels_name: str,
+    data_revision: str, classes: list[str], counts: dict[str, int],
+    metrics: dict[str, float], crop_names: list[str], training_seed: int,
+    epochs: int,
+) -> dict[str, Any]:
+    """Output is non-ready until operator reviews permissions and real weights."""
+    if not SAFE_MODEL_ID.fullmatch(model_id):
+        raise ValueError("Unsafe model id")
+    if not SAFE_REVISION.fullmatch(data_revision):
+        raise ValueError("Pin the exact 40-character dataset commit SHA")
+    if not re.fullmatch(r"[a-f0-9]{64}", weights_sha256):
+        raise ValueError("Invalid ONNX SHA256")
+    if len(classes) < 2 or len(set(classes)) != len(classes):
+        raise ValueError("A trained classifier must contain at least two unique labels")
+    if not all(counts.get(name, 0) > 0 for name in classes):
+        raise ValueError("Selected labels must all contain training examples")
+    return {
+        "id": model_id,
+        "display_name": "PlantVillage " + (
+            ", ".join(crop_names) if crop_names else "multi-crop"
+        ) + " research classifier",
+        "category": "crops",
+        "subject": "Mixed crops" if len(crop_names) != 1 else crop_names[0].capitalize(),
+        "provider": "onnx",
+        "weights_path": "models/" + weights_name,
+        "weights_sha256": weights_sha256,
+        "labels_path": "models/" + labels_name,
+        "license": "PlantVillage CC BY-SA 3.0 (confirm obligations before commercial use)",
+        "license_verified": False,
+        "validated_for_botswana": False,
+        "input_size": 224, "input_layout": "NCHW",
+        "normalization": "imagenet", "output_type": "logits",
+        "threshold": 0.75,
+        "training_source": SOURCE_REPO,
+        "dataset_id": DATASET_ID,
+        "dataset_revision": data_revision,
+        "class_count": len(classes),
+        "train_examples_by_class": counts,
+        "evaluation": metrics,
+        "seed": training_seed,
+        "epochs": epochs,
+        "capture_examples": [],
+    }
+
+
+def train(args: argparse.Namespace) -> Path:
+    if not SAFE_REVISION.fullmatch(args.revision):
+        raise ValueError("--revision must be a pinned, 40-character dataset commit SHA")
+    if args.epochs < 1 or args.batch_size < 1 or args.workers < 0:
+        raise ValueError("Invalid training configuration")
+    if not SAFE_MODEL_ID.fullmatch(args.model_id):
+        raise ValueError("Invalid model identifier")
+    # Optional dependencies used ONLY on the model-training workstation.
+    import numpy as np
+    import torch
+    from datasets import load_dataset
+    from PIL import Image
+    from torch import nn
+    from torch.utils.data import DataLoader, Dataset
+    from torchvision import models, transforms
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.use_deterministic_algorithms(True, warn_only=True)
+
+    # These are provided by the dataset publisher. Do NOT independently
+    # random-split at the image level: the same leaf could leak across sets.
+    training = load_dataset(DATASET_ID, "color", split="train", revision=args.revision)
+    testing = load_dataset(DATASET_ID, "color", split="test", revision=args.revision)
+    label_names = list(training.features["label"].names)
+    if list(testing.features["label"].names) != label_names:
+        raise ValueError("Publisher train/test labels do not match")
+    classes = select_labels(label_names, args.crop)
+    selected_old_ids = {label_names.index(label): i for i, label in enumerate(classes)}
+
+    # The official grouping-disjoint test set remains held out during training.
+    train_ids = [i for i, label in enumerate(training["label"]) if label in selected_old_ids]
+    test_ids = [i for i, label in enumerate(testing["label"]) if label in selected_old_ids]
+    if not train_ids or not test_ids:
+        raise ValueError("No real training/test examples for selected crops")
+    counts = Counter(label_names[training["label"][i]] for i in train_ids)
+
+    trans = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ])
+    class LeafSplit(Dataset):
+        def __init__(self, data, indices):
+            self.data, self.indices = data, indices
+        def __len__(self):
+            return len(self.indices)
+        def __getitem__(self, i):
+            entry = self.data[self.indices[i]]
+            rgb = entry["image"].convert("RGB")
+            return trans(rgb), selected_old_ids[entry["label"]]
+
+    train_loader = DataLoader(
+        LeafSplit(training, train_ids), batch_size=args.batch_size,
+        shuffle=True, num_workers=args.workers,
+    )
+    test_loader = DataLoader(
+        LeafSplit(testing, test_ids), batch_size=args.batch_size,
+        shuffle=False, num_workers=args.workers,
+    )
+    # No undocumented pretrained weights are downloaded/redistributed.
+    net = models.mobilenet_v3_small(weights=None)
+    net.classifier[-1] = nn.Linear(net.classifier[-1].in_features, len(classes))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+    optimizer = torch.optim.AdamW(net.parameters(), lr=args.learning_rate)
+    loss_fn = nn.CrossEntropyLoss()
+
+    for epoch in range(args.epochs):
+        net.train()
+        total_loss = 0.0
+        for images, targets in train_loader:
+            images, targets = images.to(device), targets.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            loss = loss_fn(net(images), targets)
+            loss.backward()
+            optimizer.step()
+            total_loss += float(loss.item())
+        print(f"epoch={epoch + 1}/{args.epochs} mean_loss={total_loss / len(train_loader):.5f}")
+
+    net.eval()
+    correct = observed = 0
+    with torch.inference_mode():
+        for images, targets in test_loader:
+            logits = net(images.to(device)).cpu()
+            correct += int((logits.argmax(1) == targets).sum().item())
+            observed += len(targets)
+    accuracy = correct / observed if observed else 0.0
+    print(f"held_out_leaf_disjoint_accuracy={accuracy:.4f} n={observed}")
+    if accuracy < args.min_test_accuracy:
+        raise ValueError("Held-out test accuracy below required acceptance threshold; weights not published")
+    if accuracy < 0.5:
+        raise ValueError("Model has not learned sufficiently; not exporting misleading weights")
+
+    out = Path(args.output).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    weights_name = args.model_id + ".onnx"
+    labels_name = args.model_id + ".labels.json"
+    weights_path = out / weights_name
+    labels_path = out / labels_name
+    net.cpu()
+    torch.onnx.export(
+        net, torch.zeros(1, 3, 224, 224),
+        str(weights_path), opset_version=17,
+        input_names=["image"], output_names=["logits"],
+        dynamo=False,
+    )
+    labels_path.write_text(json.dumps(classes, indent=2) + "\n", encoding="utf-8")
+    digest = hashlib.sha256(weights_path.read_bytes()).hexdigest()
+    manifest = proposed_manifest(
+        model_id=args.model_id,
+        weights_name=weights_name, labels_name=labels_name,
+        weights_sha256=digest, data_revision=args.revision,
+        classes=classes, counts=dict(counts),
+        metrics={"test_accuracy": round(accuracy, 6), "test_examples": observed},
+        crop_names=args.crop, training_seed=args.seed, epochs=args.epochs,
+    )
+    manifest_path = out / (args.model_id + ".manifest.json")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"Trained ONNX: {weights_path}; SHA256: {digest}")
+    print(f"Disabled pending independent licensing/field review: {manifest_path}")
+    return manifest_path
+
+
+def parse_args() -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--revision", required=True, help="Pinned HF PlantVillage dataset commit SHA")
+    ap.add_argument("--crop", action="append", choices=sorted(CROP_PREFIXES),
+                    default=[], help="Limit classes to one or more crops; default all 38")
+    ap.add_argument("--model-id", default="plantvillage-multi-crop-v1")
+    ap.add_argument("--output", default=str(ROOT / "models"))
+    ap.add_argument("--epochs", type=int, default=12)
+    ap.add_argument("--batch-size", type=int, default=32)
+    ap.add_argument("--workers", type=int, default=0)
+    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--learning-rate", type=float, default=0.001)
+    ap.add_argument("--min-test-accuracy", type=float, default=0.65)
+    return ap.parse_args()
+
+
+if __name__ == "__main__":
+    train(parse_args())

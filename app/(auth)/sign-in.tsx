@@ -35,7 +35,7 @@ export default function SignIn() {
     return () => { active = false; };
   }, []);
 
-  async function submit({ email, password, displayName }: CredentialFields) {
+  async function submit({ email, password }: CredentialFields) {
     setError('');
     const parsed = schema.safeParse({ email, password });
     if (!parsed.success) {

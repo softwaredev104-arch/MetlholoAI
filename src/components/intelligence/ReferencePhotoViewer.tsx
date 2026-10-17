@@ -33,6 +33,7 @@ export function ReferencePhotoViewer({ photos, initialIndex, visible, onClose }:
 
   if (!photos.length) return null;
   const current = photos[index] ?? photos[0];
+  if (!current) return null;
   const change = (step: number) => {
     setIndex(value => Math.max(0, Math.min(value + step, photos.length - 1)));
     setZoom(1);

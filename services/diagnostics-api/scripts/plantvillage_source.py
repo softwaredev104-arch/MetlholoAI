@@ -12,7 +12,6 @@ import random
 from pathlib import Path
 from urllib.parse import quote
 
-import requests
 
 HF_DATASET = "mohanty/PlantVillage"
 # Original PlantVillage GitHub tree used by the pinned reference photos.
@@ -78,6 +77,7 @@ def _leaf_id(relative: str, mapping: dict) -> str:
 def load_pinned_color_splits(revision: str, crops: list[str],
                              max_train: int, max_test: int,
                              seed: int, cache: Path):
+    import requests
     from datasets import ClassLabel, Dataset, Features, Image, Value
     from huggingface_hub import hf_hub_download
     cache.mkdir(parents=True, exist_ok=True)

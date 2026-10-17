@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
@@ -136,7 +137,16 @@ export default function Animals() {
           >
             <View style={styles.animalTop}>
               <View style={[styles.animalIcon, { backgroundColor: colors.primarySubtle }]}>
-                <Ionicons name="paw" size={25} color={colors.primary} />
+                {animal.photos?.length ? (
+                  <DrivePhotoThumbnail
+                    context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'animals' }}
+                    photo={animal.photos[0]!}
+                    width={48}
+                    height={48}
+                  />
+                ) : (
+                  <Ionicons name="paw" size={25} color={colors.primary} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <AppText variant="title3">{animal.name}</AppText>

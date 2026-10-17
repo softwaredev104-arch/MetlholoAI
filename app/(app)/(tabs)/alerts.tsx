@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import { farmDomain } from '@/services/farms/domainRepository';
+import { listCases } from '@/services/cases/caseRepository';
 import { driveAuthService } from '@/services/drive/driveAuthService';
 import {
   getCurrentWeather,
@@ -15,7 +16,7 @@ import { ChoiceChip, SectionHeader, StatusPill } from '@/components/app/ProductU
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 
-type AlertCategory = 'Outbreaks' | 'Weather' | 'System';
+type AlertCategory = 'Outbreaks' | 'Weather' | 'System' | 'My Reports';
 
 type AlertItem = {
   id: string;
@@ -39,7 +40,8 @@ export default function Alerts() {
     Promise.all([
       farmDomain.tasks.list(user.uid, farm.id),
       farmDomain.health.list(user.uid, farm.id),
-    ]).then(([tasks, health]) => {
+      listCases(user.uid, farm.id),
+    ]).then(([tasks, health, cases]) => {
       const next: AlertItem[] = [];
 
       tasks
@@ -70,6 +72,19 @@ export default function Alerts() {
             icon: 'medkit-outline',
           });
         });
+
+      cases.filter(item => item.status !== 'resolved').forEach(item => {
+        next.push({
+          id: 'case-' + item.id,
+          category: 'My Reports',
+          title: 'Private farm observation',
+          body: item.disease + ' · ' +
+            (item.district || item.village || 'Location not provided') +
+            ' · unverified, not an official outbreak alert',
+          tone: item.severity === 'Critical' || item.severity === 'Severe' ? 'warning' : 'info',
+          icon: 'document-text-outline',
+        });
+      });
 
       if (!driveAuthService.isConnected()) {
         next.push({
@@ -123,7 +138,7 @@ export default function Alerts() {
       />
 
       <View style={styles.filters}>
-        {(['All', 'Outbreaks', 'Weather', 'System'] as const).map(item => (
+        {(['All', 'My Reports', 'Outbreaks', 'Weather', 'System'] as const).map(item => (
           <ChoiceChip
             key={item}
             label={item}

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import type { StoredPhoto } from '@/services/drive/recordPhotoService';
 
 export type FarmCase = {
   id: string;
@@ -19,7 +20,7 @@ export type FarmCase = {
   village?: string;
   location?: string;
   notes?: string;
-  photos?: string[];
+  photos?: Array<string | StoredPhoto>; // string is legacy local-only URI
   status: 'open' | 'monitoring' | 'resolved';
   createdAt: string;
   updatedAt: string;

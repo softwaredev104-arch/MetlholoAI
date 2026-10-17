@@ -14,6 +14,18 @@ a model as available merely because the training code or a checkpoint exists.
 - **Decision:** **REJECTED** (minimum acceptance threshold 0.65), so no ONNX model was approved, installed, or published. Do not treat this as an operational crop-disease detector.
 - **Recovery evidence:** [GitHub artifact](https://github.com/softwaredev104-arch/MetlholoAI/actions/runs/39059102573) (approximately 17 MB ZIP, includes research checkpoint and evaluation; available for the configured artifact retention period).
 
+## Maize transfer-learning pilot — research acceptance passed
+
+- **GitHub Actions:** [successful run 39059446470](https://github.com/softwaredev104-arch/MetlholoAI/actions/runs/39059446470)
+- **Real data:** same pinned PlantVillage revision `9e97599868962bd0079b8db4b7f1efa9185fa1e7`, 600 training images and 320 held-out images across **four maize classes**.
+- **Leakage control:** 290 overlapping publisher training images quarantined before sampling; 227 shared physical-leaf identifiers were detected and excluded from training.
+- **Method:** MobileNetV3-Small with explicit torchvision ImageNet1K_V1 initialization, frozen feature backbone, new classifier head, six epochs.
+- **Evaluation:** held-out accuracy **0.93125 (298/320)**; above the research acceptance threshold of 0.65, **not independently validated for Botswana fields**.
+- **Export:** real ONNX binary (`plantvillage-maize-transfer-pilot-v1.onnx`, 6,097,437 bytes), labels and manifest plus trusted training checkpoint.
+- **Verified SHA-256:** `639aa25fd5ad4d5c76394dbfbcc1d6da538d48d5609eb12c8aedb2bb560e6527` matches the saved ONNX file exactly. The research artifact ZIP passes integrity checks and contains the expected four class labels.
+- **Artifact:** [download via the completed GitHub Actions run](https://github.com/softwaredev104-arch/MetlholoAI/actions/runs/39059446470).
+- **Status:** `candidate_accepted_for_license_review`, with `license_verified: false`, `validated_for_botswana: false`. **NOT installed or served** as a production farmer-facing diagnostic.
+
 ## Next research evaluation
 
 An opt-in torchvision MobileNetV3-Small ImageNet1K_V1 initialization has

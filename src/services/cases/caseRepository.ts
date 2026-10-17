@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
 import { driveAuthService } from '@/services/drive/driveAuthService';
 import type { StoredPhoto } from '@/services/drive/recordPhotoService';
+import type { RegionalObservationDraft } from './regionalObservation';
 
 export type FarmCase = {
   id: string;
@@ -17,10 +18,7 @@ export type FarmCase = {
   disease: string;
   sourceDiagnosisId?: string;
   verificationStatus?: 'farmer_reported' | 'expert_reviewed' | 'officially_confirmed';
-  regionalContribution?: {
-    status: 'draft_not_shared';
-    preparedAt: string;
-  };
+  regionalContribution?: RegionalObservationDraft;
   severity: 'Mild' | 'Moderate' | 'Severe' | 'Critical';
   district?: string;
   village?: string;

@@ -157,8 +157,28 @@ def prepare_splits_from_files(
 
     train = split(train_paths, train_keys)
     test = split(test_paths, test_keys)
+    # The pinned publisher manifests can contain shared physical leaf groups.
+    # Keep the publisher's test set untouched, and quarantine every matching
+    # group from TRAIN; never migrate test images into training.
+    overlap = set(train.leaf_ids) & set(test.leaf_ids)
+    if overlap:
+        kept = [i for i, leaf in enumerate(train.leaf_ids) if leaf not in overlap]
+        quarantined = len(train.leaf_ids) - len(kept)
+        print(f"quarantined_training_images={quarantined} "
+              f"overlapping_physical_leaf_groups={len(overlap)}", flush=True)
+        if not kept:
+            raise ValueError("No leakage-free training images remain")
+        train = ArchiveSplit(
+            train.archive_path,
+            [train.source_paths[i] for i in kept],
+            [train.ids[i] for i in kept],
+            [train.leaf_ids[i] for i in kept],
+            train.features["label"].names,
+            [train.resolved_keys[i] for i in kept],
+            sum(not train.leaf_ids[i].startswith("unmapped:") for i in kept),
+        )
     if set(train.leaf_ids) & set(test.leaf_ids):
-        raise ValueError("Physical leaf IDs overlap across official train/test")
+        raise ValueError("Unresolved physical-leaf leakage")
     return train, test
 
 

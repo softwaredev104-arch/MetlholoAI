@@ -183,6 +183,7 @@ def prepare_splits_from_files(
 
 def load_pinned_plantvillage_splits(revision: str) -> tuple[ArchiveSplit, ArchiveSplit]:
     from huggingface_hub import hf_hub_download
+    from huggingface_hub import hf_hub_download
     if not REVISION_RE.fullmatch(revision):
         raise ValueError("Require a pinned dataset revision")
     def download(path: str) -> str:

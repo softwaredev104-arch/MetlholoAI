@@ -6,6 +6,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
@@ -73,6 +74,16 @@ export default function AnimalDetail() {
           <IconLabel icon="medkit-outline" label="Last checkup" value={animal.lastCheckup || 'Not set'} />
         </View>
       </AppCard>
+
+      {animal.photos?.length ? (
+        <AppCard>
+          <RecordPhotoField
+            context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'animals' }}
+            photos={animal.photos}
+            label="Animal photos"
+          />
+        </AppCard>
+      ) : null}
 
       <AppCard>
         <AppText variant="title2">Vaccinations</AppText>

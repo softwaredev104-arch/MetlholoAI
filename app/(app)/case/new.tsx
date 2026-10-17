@@ -119,7 +119,7 @@ export default function NewCase() {
     try {
       const regionalDraft = prepareRegional
         ? prepareRegionalObservationDraft({
-            district, disease, subjectType, status: 'open',
+            district, disease, subjectType, status: 'open', severity,
             animalId: subjectType === 'animal' ? subjectId : undefined,
             cropId: subjectType === 'crop' ? subjectId : undefined,
           })

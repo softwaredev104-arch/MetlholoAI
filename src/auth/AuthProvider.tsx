@@ -73,6 +73,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const bootstrapUser = async (user: User) => {
+    // Firebase's auth notification may arrive while the Google sign-in flow
+    // is still attaching its already-authorized Drive token. Wait for it so
+    // one successful Google sign-in never triggers a second Drive popup.
+    await authService.waitForGoogleDriveAdoption();
     const googleUser = isGoogleUser(user);
     const rememberedGrant = await driveAuthService.hasRememberedGrant(user.uid);
 

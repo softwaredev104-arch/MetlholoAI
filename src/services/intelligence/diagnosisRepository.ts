@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import type { StoredPhoto } from '@/services/drive/recordPhotoService';
 import type { PredictionResult } from '@/services/intelligence/client';
 import type { IntelligenceModel } from '@/services/intelligence/catalog';
 
@@ -17,7 +18,8 @@ export type DiagnosisRecord = {
   outcome: string;
   confidence: number;
   report?: unknown;
-  imageUri?: string;
+  imageUri?: string; // legacy local URI; not portable across devices
+  image?: StoredPhoto;
   createdAt: string;
 };
 

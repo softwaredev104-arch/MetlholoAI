@@ -18,6 +18,7 @@ import {
   type TreatmentRecord,
 } from '@/services/treatments/treatmentRepository';
 import { useTheme } from '@/design/themes';
+import { prepareRegionalObservationDraft } from '@/services/cases/regionalObservation';
 import { Spacing } from '@/design/spacing';
 
 export default function CaseDetail() {
@@ -26,6 +27,9 @@ export default function CaseDetail() {
   const { colors } = useTheme();
   const [record, setRecord] = useState<FarmCase | null>(null);
   const [treatments, setTreatments] = useState<TreatmentRecord[]>([]);
+  const [confirmRegional, setConfirmRegional] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftError, setDraftError] = useState('');
 
   async function load() {
     if (!user || !farm || !caseId) return;
@@ -45,6 +49,39 @@ export default function CaseDetail() {
     if (!user || !farm || !record) return;
     await updateCase(user.uid, farm.id, record.id, { status: 'resolved' });
     await load();
+  }
+
+  async function prepareDraft() {
+    if (!user || !farm || !record) return;
+    setDraftSaving(true);
+    setDraftError('');
+    try {
+      const draft = prepareRegionalObservationDraft(record);
+      const updated = await updateCase(user.uid, farm.id, record.id, {
+        regionalContribution: draft,
+      });
+      if (!updated) throw new Error('Case not found in your farm records.');
+      setConfirmRegional(false);
+      await load();
+    } catch (error) {
+      setDraftError(error instanceof Error ? error.message : 'Could not prepare the draft.');
+    } finally {
+      setDraftSaving(false);
+    }
+  }
+
+  async function discardDraft() {
+    if (!user || !farm || !record) return;
+    setDraftSaving(true);
+    setDraftError('');
+    try {
+      await updateCase(user.uid, farm.id, record.id, { regionalContribution: undefined });
+      await load();
+    } catch (error) {
+      setDraftError(error instanceof Error ? error.message : 'Unable to discard the draft.');
+    } finally {
+      setDraftSaving(false);
+    }
   }
 
   if (!record) {
@@ -164,6 +201,46 @@ export default function CaseDetail() {
           />
         ) : null}
       </View>
+
+      <SectionHeader title="Regional observation research" />
+      <AppCard>
+        <AppText variant="headline">Private draft — no external sharing</AppText>
+        <AppText style={{ color: colors.textSecondary }}>
+          You can prepare a district-level research observation from this case.
+          Only the district, broad subject type, suspected condition, case status
+          and unverified classification are included. Your identity, precise
+          location and photos are excluded. MetlholoAI does not currently send
+          drafts to agricultural authorities, other farmers or public maps.
+        </AppText>
+        {record.regionalContribution ? (
+          <>
+            <StatusPill label="Draft prepared · not submitted" tone="info" />
+            <AppButton
+              title="Discard research draft"
+              variant="secondary"
+              disabled={draftSaving}
+              onPress={discardDraft}
+            />
+          </>
+        ) : confirmRegional ? (
+          <>
+            <AppText style={{ color: colors.textSecondary }}>
+              This prepares a private draft within your Google Drive-backed
+              farm case. It does not publish an alert or submit your data.
+            </AppText>
+            <AppButton title="Confirm private draft" loading={draftSaving} onPress={prepareDraft} />
+            <AppButton title="Cancel" variant="ghost" onPress={() => setConfirmRegional(false)} />
+          </>
+        ) : (
+          <AppButton
+            title="Prepare private regional observation"
+            variant="secondary"
+            icon="document-text-outline"
+            onPress={() => setConfirmRegional(true)}
+          />
+        )}
+        {draftError ? <AppText style={{ color: colors.error }}>{draftError}</AppText> : null}
+      </AppCard>
 
       <SectionHeader title="Treatments" />
       {treatments.length === 0 ? (

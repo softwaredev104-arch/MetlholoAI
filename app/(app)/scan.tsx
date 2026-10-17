@@ -35,6 +35,7 @@ import {
 import { resolveDiagnosisReference } from '@/services/knowledge/diagnosisReference';
 import type { DiagnosisReference } from '@/services/knowledge/models';
 import { AgriculturalInputCard, GuidelineCard } from '@/components/knowledge';
+import { ScanWelcomeGuide, ModelCaptureGuide } from '@/components/intelligence/CaptureGuidance';
 import { ChoiceChip, SectionHeader, StatusPill } from '@/components/app/ProductUI';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import { useTheme } from '@/design/themes';
@@ -64,6 +65,8 @@ export default function Scan() {
   const { user, farm } = usePrimaryFarm();
   const { colors } = useTheme();
 
+  const [introCompleted, setIntroCompleted] = useState(false);
+  const [guidedModelId, setGuidedModelId] = useState('');
   const [category, setCategory] = useState<ScanCategory>(
     params.sourceRecordType === 'animals'
       ? 'livestock'
@@ -298,6 +301,15 @@ export default function Scan() {
     setReport(null);
     setReference(null);
     setLastDiagnosisId('');
+    setGuidedModelId('');
+  }
+
+  if (!introCompleted) {
+    return (
+      <AppScreen maxWidth={980}>
+        <ScanWelcomeGuide onContinue={() => setIntroCompleted(true)} />
+      </AppScreen>
+    );
   }
 
   return (
@@ -387,6 +399,9 @@ export default function Scan() {
                   onPress={() => {
                     if (loading || item === subject) return;
                     setSubject(item);
+                    setGuidedModelId('');
+                    setUri(null);
+                    setSelectedPhoto(null);
                     setPrediction(null);
                     setReport(null);
                     setReference(null);
@@ -409,6 +424,9 @@ export default function Scan() {
                   onPress={() => {
                     if (loading || model?.id === item.id) return;
                     setModelId(item.id);
+                    setGuidedModelId('');
+                    setUri(null);
+                    setSelectedPhoto(null);
                     setPrediction(null);
                     setReport(null);
                     setReference(null);
@@ -420,7 +438,14 @@ export default function Scan() {
             </View>
           </View>
 
-          {model ? (
+          {model && guidedModelId !== model.id ? (
+            <ModelCaptureGuide
+              model={model}
+              onContinue={() => setGuidedModelId(model.id)}
+            />
+          ) : null}
+
+          {model && guidedModelId === model.id ? (
             <AppCard>
               <StatusPill label={model.provider === 'gateway'
                 ? 'In-project AI model'
@@ -443,7 +468,7 @@ export default function Scan() {
             </AppCard>
           ) : null}
 
-          <View style={styles.actions}>
+          {model && guidedModelId === model.id ? <View style={styles.actions}>
             <AppButton
               title="Open Camera"
               icon="camera-outline"
@@ -455,7 +480,7 @@ export default function Scan() {
               variant="secondary"
               onPress={() => choose('library')}
             />
-          </View>
+          </View> : null}
 
           {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
           {uri && !recordPhotoService.isAvailable() ? (
@@ -464,7 +489,7 @@ export default function Scan() {
             </AppText>
           ) : null}
 
-          {uri && model ? (
+          {uri && model && guidedModelId === model.id ? (
             <AppButton
               title="Run Diagnosis"
               icon="scan-outline"
@@ -480,7 +505,7 @@ export default function Scan() {
         <AppText style={{ color: colors.textSecondary }}>{photoNotice}</AppText>
       ) : null}
 
-      {prediction && model ? (
+      {prediction && model && guidedModelId === model.id ? (
         <AppCard>
           <StatusPill label="AI-suggested finding · not confirmed" tone="warning" />
           <AppText variant="largeTitle">

@@ -5,14 +5,20 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { IntelligenceCard } from '@/components/intelligence/IntelligenceCard';
 import { ModelTray } from '@/components/intelligence/ModelTray';
+import { ScanWelcomeGuide } from '@/components/intelligence/CaptureGuidance';
 import { getModels, getModelsForSubject, type IntelligenceCategory, type IntelligenceModel } from '@/services/intelligence/catalog';
 import { Spacing } from '@/design/spacing';
 
 export default function IntelligenceExplorer() {
+  const [introCompleted, setIntroCompleted] = useState(false);
   const [category, setCategory] = useState<IntelligenceCategory>('crops');
   const [subject, setSubject] = useState<string | null>(null);
   const [selected, setSelected] = useState<IntelligenceModel | null>(null);
   const subjects = useMemo(() => Array.from(new Set(getModels(category).map(model => model.subject))), [category]);
+
+  if (!introCompleted) {
+    return <AppScreen><ScanWelcomeGuide onContinue={() => setIntroCompleted(true)} /></AppScreen>;
+  }
 
   return (
     <AppScreen>

@@ -1,3 +1,5 @@
+import type { CaptureExample } from './captureGuidance';
+
 export type IntelligenceCategory = 'crops' | 'livestock' | 'fruits' | 'pests';
 
 export type IntelligenceModel = {
@@ -11,6 +13,8 @@ export type IntelligenceModel = {
   reportPath: string;
   input: 'image';
   trainingImageHints: string[];
+  /** Empty until image licensing and exact training provenance are verified. */
+  captureExamples?: CaptureExample[];
   provider?: 'legacy' | 'gateway';
   configured?: boolean;
   validatedForBotswana?: boolean;
@@ -69,12 +73,14 @@ export function getModelsForSubject(subject: string) {
 export function gatewayModel(input: {
   id: string; name: string; category: IntelligenceCategory; subject: string;
   ready: boolean; validated_for_botswana?: boolean; review_required?: boolean;
+  captureExamples?: CaptureExample[];
 }): IntelligenceModel {
   return {
     id: input.id, name: input.name, category: input.category,
     subject: input.subject, service: 'gateway', provider: 'gateway',
     configured: input.ready, validatedForBotswana: !!input.validated_for_botswana,
     reviewRequired: input.review_required !== false,
+    captureExamples: input.captureExamples ?? [],
     predictPath: '/v1/predict', reportPath: '/v1/report',
     input: 'image', trainingImageHints: [
       'Use clear daylight and keep the affected area in focus',

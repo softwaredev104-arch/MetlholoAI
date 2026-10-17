@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { getFirebaseAuth } from '@/services/firebase/client';
 import type { IntelligenceModel, IntelligenceCategory } from './catalog';
 import { INTELLIGENCE_SERVICES, gatewayModel } from './catalog';
+import { approvedCaptureExamples } from './captureGuidance';
 
 const gatewayBase = (process.env.EXPO_PUBLIC_AI_GATEWAY_URL ?? '').trim().replace(/\/$/, '');
 
@@ -96,6 +97,7 @@ export async function listGatewayModels(): Promise<IntelligenceModel[]> {
       subject: item.subject as string, ready: true,
       validated_for_botswana: item.validated_for_botswana === true,
       review_required: item.review_required !== false,
+      captureExamples: approvedCaptureExamples(item.capture_examples),
     }));
 }
 

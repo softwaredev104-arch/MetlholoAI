@@ -65,6 +65,46 @@ def sample_by_class(
                   for index in (values[:limit] if limit else values))
 
 
+def classification_metrics(
+    classes: list[str], actual: list[int], predicted: list[int],
+) -> dict[str, Any]:
+    """Class-level metrics on held-out photos; never infer missing predictions."""
+    if not classes or not actual or len(actual) != len(predicted):
+        raise ValueError("Class metrics require real matched predictions and labels")
+    count = len(classes)
+    confusion = [[0 for _ in range(count)] for _ in range(count)]
+    for true, predicted_class in zip(actual, predicted):
+        if not (0 <= true < count and 0 <= predicted_class < count):
+            raise ValueError("Evaluation label outside trained class mapping")
+        confusion[true][predicted_class] += 1
+    rows = {}
+    precisions, recalls, f1s = [], [], []
+    for i, name in enumerate(classes):
+        tp = confusion[i][i]
+        support = sum(confusion[i])
+        predicted_count = sum(row[i] for row in confusion)
+        precision = tp / predicted_count if predicted_count else 0.0
+        recall = tp / support if support else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+        precisions.append(precision)
+        recalls.append(recall)
+        f1s.append(f1)
+        rows[name] = {
+            "support": support,
+            "precision": round(precision, 6),
+            "recall": round(recall, 6),
+            "f1": round(f1, 6),
+        }
+    return {
+        "macro_precision": round(sum(precisions) / count, 6),
+        "macro_recall": round(sum(recalls) / count, 6),
+        "macro_f1": round(sum(f1s) / count, 6),
+        "per_class": rows,
+        "confusion_matrix": confusion,
+        "confusion_matrix_labels": classes,
+    }
+
+
 def proposed_manifest(
     *, model_id: str, weights_name: str, weights_sha256: str, labels_name: str,
     data_revision: str, classes: list[str], counts: dict[str, int],
@@ -267,12 +307,18 @@ def train(args: argparse.Namespace) -> Path:
 
     net.eval()
     correct = observed = 0
+    actual_labels: list[int] = []
+    predicted_labels: list[int] = []
     with torch.inference_mode():
         for images, targets in test_loader:
             logits = net(images.to(device)).cpu()
-            correct += int((logits.argmax(1) == targets).sum().item())
+            choices = logits.argmax(1)
+            correct += int((choices == targets).sum().item())
             observed += len(targets)
+            actual_labels.extend(targets.tolist())
+            predicted_labels.extend(choices.tolist())
     accuracy = correct / observed if observed else 0.0
+    per_class_metrics = classification_metrics(classes, actual_labels, predicted_labels)
     print(f"held_out_leaf_disjoint_accuracy={accuracy:.4f} n={observed}", flush=True)
     # Always preserve truthful metrics, even when the resulting model is rejected.
     passed = accuracy >= max(args.min_test_accuracy, 0.5)
@@ -285,6 +331,7 @@ def train(args: argparse.Namespace) -> Path:
         "train_examples_by_class": dict(counts),
         "test_examples_by_class": dict(test_counts),
         "accuracy": round(accuracy, 6), "test_examples": observed,
+        "detailed_metrics": per_class_metrics,
         "minimum_accuracy": args.min_test_accuracy,
         "epoch_count": args.epochs,
         "weights_initialized": initialization,
@@ -317,7 +364,8 @@ def train(args: argparse.Namespace) -> Path:
         weights_name=weights_name, labels_name=labels_name,
         weights_sha256=digest, data_revision=args.revision,
         classes=classes, counts=dict(counts),
-        metrics={"test_accuracy": round(accuracy, 6), "test_examples": observed},
+        metrics={"test_accuracy": round(accuracy, 6), "test_examples": observed,
+                 "macro_f1": per_class_metrics["macro_f1"]},
         crop_names=args.crop, training_seed=args.seed, epochs=args.epochs,
         initialization=initialization,
     )

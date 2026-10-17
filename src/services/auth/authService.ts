@@ -21,6 +21,11 @@ import type { Role } from '@/types/user';
 
 const GOOGLE_SIGN_IN_SCOPE = 'openid email profile https://www.googleapis.com/auth/drive.file';
 
+// Firebase may announce sign-in before the Drive token has been adopted.
+// The auth provider waits for this handoff before inspecting cloud backups.
+let pendingGoogleDriveAdoption: Promise<void> | null = null;
+
+
 function getGoogleAccessToken() {
   // Do not await a script or another operation before the Google popup call:
   // iOS Safari requires the request to originate from the actual tap.
@@ -114,23 +119,41 @@ export const authService = {
       googleToken.accessToken,
     );
 
-    const credential = await signInWithCredential(
-      getFirebaseAuth(),
-      firebaseCredential,
-    );
+    // Register the handoff before Firebase emits its auth-state callback.
+    // Otherwise returning users may be sent to Drive recovery unnecessarily.
+    let releaseAdoption: (() => void) | undefined;
+    pendingGoogleDriveAdoption = new Promise<void>(resolve => {
+      releaseAdoption = resolve;
+    });
 
-    // A Drive token failure is NOT a Firebase sign-out.
     try {
-      await driveAuthService.adoptAccessToken(
-        googleToken.accessToken,
-        googleToken.expiresIn,
-        { ownerId: credential.user.uid, expectedEmail: credential.user.email },
+      const credential = await signInWithCredential(
+        getFirebaseAuth(),
+        firebaseCredential,
       );
-    } catch {
-      // The user can explicitly reconnect Drive from their signed-in account.
-    }
 
-    return credential.user;
+      // Google sign-in already requested drive.file. Reuse that same token,
+      // instead of requiring a second consent popup after Firebase signs in.
+      try {
+        await driveAuthService.adoptAccessToken(
+          googleToken.accessToken,
+          googleToken.expiresIn,
+          { ownerId: credential.user.uid, expectedEmail: credential.user.email },
+        );
+      } catch {
+        // Drive errors must not invalidate an otherwise successful login.
+        // The signed-in user can choose to reconnect Drive later.
+      }
+
+      return credential.user;
+    } finally {
+      releaseAdoption?.();
+      pendingGoogleDriveAdoption = null;
+    }
+  },
+
+  async waitForGoogleDriveAdoption() {
+    await pendingGoogleDriveAdoption;
   },
 
   async signUp(

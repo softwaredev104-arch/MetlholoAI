@@ -51,7 +51,6 @@ describe('private regional observation draft', () => {
   it('marks even an observed serious disease as unverified', () => {
     const draft = prepareRegionalObservationDraft({
       ...caseRecord, disease: 'Foot and Mouth Disease',
-      severity: 'Critical',
     });
     expect(draft.verification).toBe('unverified_farmer_observation');
     expect(draft.status).toBe('draft_not_shared');

@@ -61,6 +61,7 @@ export default function NewCase() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [linkedDiagnosisId, setLinkedDiagnosisId] = useState('');
+  const [prepareRegional, setPrepareRegional] = useState(false);
 
   useEffect(() => {
     if (!user || !farm) return;
@@ -132,6 +133,9 @@ export default function NewCase() {
         disease: disease.trim(),
         sourceDiagnosisId: linkedDiagnosisId || undefined,
         verificationStatus: 'farmer_reported',
+        regionalContribution: prepareRegional
+          ? { status: 'draft_not_shared', preparedAt: new Date().toISOString() }
+          : undefined,
         severity,
         district: district.trim() || undefined,
         village: village.trim() || undefined,
@@ -249,6 +253,20 @@ export default function NewCase() {
         onPendingChange={setPendingPhotos}
         label="Case evidence photos"
       />
+
+      <View style={styles.section}>
+        <AppText variant="headline">Regional research participation</AppText>
+        <ChoiceChip
+          label={prepareRegional ? 'Prepared privately' : 'Prepare this observation for future sharing'}
+          selected={prepareRegional}
+          onPress={() => setPrepareRegional(value => !value)}
+        />
+        <AppText style={{ color: colors.textSecondary }}>
+          Optional. This only marks a private draft in your Google Drive.
+          Nothing is sent to regional researchers, other farmers, or authorities.
+          A separate review and consent step will be required before any future sharing.
+        </AppText>
+      </View>
 
       {error ? <AppText style={{ color: colors.error }}>{error}</AppText> : null}
       <AppButton

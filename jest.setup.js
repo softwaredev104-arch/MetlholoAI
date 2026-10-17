@@ -7,7 +7,7 @@
 Object.defineProperty(globalThis, 'fetch', {
   configurable: true,
   writable: true,
-  value: jest.fn(async () => {
+  value: async () => {
     throw new Error('Unexpected network request in a unit test.');
-  }),
+  },
 });

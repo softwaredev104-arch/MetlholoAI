@@ -1,6 +1,6 @@
 import json
 import pytest
-from scripts.train_plantvillage import select_labels, proposed_manifest
+from scripts.train_plantvillage import select_labels, proposed_manifest, sample_by_class
 
 SHA = "a" * 40
 WEIGHTS = "b" * 64
@@ -53,3 +53,21 @@ def test_rejects_unpinned_training_or_untrained_classes():
         proposed_manifest(**{**kwargs, "counts": {CLASSES[0]: 5}})
     with pytest.raises(ValueError, match="Unsafe"):
         proposed_manifest(**{**kwargs, "model_id": "../escape"})
+
+
+def test_seeded_class_balanced_sampling_retains_real_source_indices():
+    # The input labels are from an already separated publisher split. Never
+    # randomly redistribute individual photos between train and test.
+    labels = [0] * 12 + [1] * 9 + [2] * 5
+    choices = sample_by_class(labels, {0: 0, 2: 1}, limit=3, seed=123)
+    assert len(choices) == 6
+    assert sum(labels[i] == 0 for i in choices) == 3
+    assert sum(labels[i] == 2 for i in choices) == 3
+    assert choices == sample_by_class(labels, {0: 0, 2: 1}, limit=3, seed=123)
+    assert set(choices).issubset(set(range(len(labels))))
+    assert len(sample_by_class(labels, {0: 0, 2: 1}, limit=0, seed=123)) == 17
+
+
+def test_no_training_sampling_without_real_class_images():
+    with pytest.raises(ValueError, match="zero source images"):
+        sample_by_class([0, 0, 1], {0: 0, 4: 1}, limit=2, seed=42)

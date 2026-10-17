@@ -1,4 +1,5 @@
 import type { CaptureExample } from './captureGuidance';
+import { PLANTVILLAGE_REFERENCES } from './plantVillageReferences';
 
 export type IntelligenceCategory = 'crops' | 'livestock' | 'fruits' | 'pests';
 
@@ -55,7 +56,11 @@ export const INTELLIGENCE_MODELS: IntelligenceModel[] = [
   { id: 'grape-black-measles', name: 'Black Measles', category: 'crops', subject: 'Grape', disease: 'Black Measles', service: 'grape', predictPath: '/api/crops/Grape/black_measles/predict', reportPath: '/api/crops/Grape/black_measles/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
   { id: 'grape-black-rot', name: 'Black Rot', category: 'crops', subject: 'Grape', disease: 'Black Rot', service: 'grape', predictPath: '/api/crops/Grape/black_rot/predict', reportPath: '/api/crops/Grape/black_rot/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
   { id: 'grape-isariopsis', name: 'Isariopsis Leaf Spot', category: 'crops', subject: 'Grape', disease: 'Isariopsis Leaf Spot', service: 'grape', predictPath: '/api/crops/Grape/isariopsis_leaf_spot/predict', reportPath: '/api/crops/Grape/isariopsis_leaf_spot/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
-];
+].map(model => ({
+  ...model,
+  // Reference images do not imply this model has weights or is connected.
+  captureExamples: PLANTVILLAGE_REFERENCES[model.id] ?? [],
+}));
 
 export function getModels(category: IntelligenceCategory) {
   return INTELLIGENCE_MODELS.filter(model => model.category === category);

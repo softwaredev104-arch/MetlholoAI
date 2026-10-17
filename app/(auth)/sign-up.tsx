@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
@@ -25,6 +25,21 @@ export default function SignUp() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [googleSetupError, setGoogleSetupError] = useState('');
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let active = true;
+    authService.prepareGoogleSignIn()
+      .then(() => { if (active) setGoogleReady(true); })
+      .catch(error => {
+        if (active) setGoogleSetupError(
+          error instanceof Error ? error.message : 'Google sign-in could not load.',
+        );
+      });
+    return () => { active = false; };
+  }, []);
 
   async function submit() {
     setError('');
@@ -73,8 +88,13 @@ export default function SignUp() {
             variant="secondary"
             onPress={continueWithGoogle}
             loading={googleLoading}
-            disabled={loading}
+            disabled={loading || !googleReady}
           />
+          {googleSetupError ? (
+            <AppText variant="footnote" style={{ color: colors.warning }}>
+              Google sign-in could not load. Use email sign-in or reload this page.
+            </AppText>
+          ) : null}
 
           <View style={styles.divider}>
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />

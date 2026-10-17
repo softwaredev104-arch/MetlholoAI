@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
   browserLocalPersistence,
+  indexedDBLocalPersistence,
   getAuth,
   initializeAuth,
   type Auth,
@@ -26,9 +27,11 @@ export function getFirebaseAuth() {
     if (Platform.OS === 'web') {
       try {
         auth = initializeAuth(firebaseApp, {
-          persistence: browserLocalPersistence,
+          persistence: [indexedDBLocalPersistence, browserLocalPersistence],
         });
-      } catch {
+      } catch (error) {
+        // Do not silently hide auth/storage initialization failures.
+        if ((error as { code?: string }).code !== 'auth/already-initialized') throw error;
         auth = getAuth(firebaseApp);
       }
     } else {

@@ -182,7 +182,13 @@ def _onnx_predictions(model: dict[str, Any], image: Image.Image) -> list[dict]:
         )
     elif model.get("normalization") != "none":
         raise HTTPException(503, "Unsupported model normalization")
-    array = np.transpose(pixels, (2, 0, 1))[None, :, :, :]
+    layout = model.get("input_layout", "NCHW")
+    if layout == "NCHW":
+        array = np.transpose(pixels, (2, 0, 1))[None, :, :, :]
+    elif layout == "NHWC":
+        array = pixels[None, :, :, :]
+    else:
+        raise HTTPException(503, "Unsupported ONNX input layout")
     session = _onnx_session(str(weights))
     scores = np.asarray(session.run(None, {session.get_inputs()[0].name: array})[0]).flatten()
     if scores.size != len(labels) or not np.all(np.isfinite(scores)):
@@ -191,7 +197,11 @@ def _onnx_predictions(model: dict[str, Any], image: Image.Image) -> list[dict]:
         shifted = scores - np.max(scores)
         exp = np.exp(shifted)
         scores = exp / np.sum(exp)
-    elif model.get("output_type") != "probabilities":
+    elif model.get("output_type") == "probabilities":
+        if np.any(scores < 0) or scores.sum() <= 0:
+            raise HTTPException(503, "Model returned invalid probabilities")
+        scores = scores / scores.sum()
+    else:
         raise HTTPException(503, "Unsupported model output type")
     order = np.argsort(scores)[::-1][:5]
     return [{"label": labels[int(i)], "confidence": float(scores[i])} for i in order]

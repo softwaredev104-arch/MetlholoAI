@@ -48,6 +48,23 @@ def select_labels(all_labels: list[str], crops: list[str]) -> list[str]:
     return chosen
 
 
+def sample_by_class(
+    labels: list[int], selected_old_ids: dict[int, int], limit: int, seed: int,
+) -> list[int]:
+    """Balanced, seeded subset without altering publisher train/test membership."""
+    randomizer = random.Random(seed)
+    groups: dict[int, list[int]] = {old: [] for old in selected_old_ids}
+    for index, label in enumerate(labels):
+        if label in groups:
+            groups[label].append(index)
+    if any(not values for values in groups.values()):
+        raise ValueError("One or more selected classes have zero source images")
+    for values in groups.values():
+        randomizer.shuffle(values)
+    return sorted(index for values in groups.values()
+                  for index in (values[:limit] if limit else values))
+
+
 def proposed_manifest(
     *, model_id: str, weights_name: str, weights_sha256: str, labels_name: str,
     data_revision: str, classes: list[str], counts: dict[str, int],
@@ -97,7 +114,8 @@ def proposed_manifest(
 def train(args: argparse.Namespace) -> Path:
     if not SAFE_REVISION.fullmatch(args.revision):
         raise ValueError("--revision must be a pinned, 40-character dataset commit SHA")
-    if args.epochs < 1 or args.batch_size < 1 or args.workers < 0:
+    if (args.epochs < 1 or args.batch_size < 1 or args.workers < 0 or
+            args.max_train_per_class < 0 or args.max_test_per_class < 0):
         raise ValueError("Invalid training configuration")
     if not SAFE_MODEL_ID.fullmatch(args.model_id):
         raise ValueError("Invalid model identifier")
@@ -126,11 +144,27 @@ def train(args: argparse.Namespace) -> Path:
     selected_old_ids = {label_names.index(label): i for i, label in enumerate(classes)}
 
     # The official grouping-disjoint test set remains held out during training.
-    train_ids = [i for i, label in enumerate(training["label"]) if label in selected_old_ids]
-    test_ids = [i for i, label in enumerate(testing["label"]) if label in selected_old_ids]
+    train_ids = sample_by_class(
+        training["label"], selected_old_ids, args.max_train_per_class, args.seed,
+    )
+    test_ids = sample_by_class(
+        testing["label"], selected_old_ids, args.max_test_per_class, args.seed + 1,
+    )
     if not train_ids or not test_ids:
         raise ValueError("No real training/test examples for selected crops")
     counts = Counter(label_names[training["label"][i]] for i in train_ids)
+    test_counts = Counter(label_names[testing["label"][i]] for i in test_ids)
+    if len(test_counts) != len(classes):
+        raise ValueError("Each selected class needs held-out test images")
+    # Verify the actual physical-leaf identifiers in the split used for training.
+    train_leaf_ids = {training["leaf_id"][i] for i in train_ids}
+    test_leaf_ids = {testing["leaf_id"][i] for i in test_ids}
+    if not all(train_leaf_ids) or not all(test_leaf_ids):
+        raise ValueError("Missing source physical-leaf grouping identifiers")
+    if train_leaf_ids & test_leaf_ids:
+        raise ValueError("Train/test physical-leaf leakage detected")
+    print(f"source_revision={args.revision} train_images={len(train_ids)} "
+          f"held_out_images={len(test_ids)} classes={len(classes)}", flush=True)
 
     trans = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -162,8 +196,27 @@ def train(args: argparse.Namespace) -> Path:
     net.to(device)
     optimizer = torch.optim.AdamW(net.parameters(), lr=args.learning_rate)
     loss_fn = nn.CrossEntropyLoss()
+    out = Path(args.output).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    checkpoint = out / (args.model_id + ".checkpoint.pt")
+    start_epoch = 0
+    if args.resume_from:
+        # Resume ONLY user-trusted checkpoint artifacts from our own previous run.
+        # weights_only blocks arbitrary Python object deserialization.
+        state = torch.load(args.resume_from, map_location="cpu", weights_only=True)
+        if (state.get("model_id") != args.model_id or
+                state.get("dataset_revision") != args.revision or
+                state.get("classes") != classes or
+                state.get("seed") != args.seed):
+            raise ValueError("Checkpoint does not match model, labels, seed and dataset revision")
+        net.load_state_dict(state["model_state"])
+        optimizer.load_state_dict(state["optimizer_state"])
+        start_epoch = int(state["epoch"])
+        if start_epoch < 0 or start_epoch >= args.epochs:
+            raise ValueError("Checkpoint epoch invalid or already at target")
+        print(f"Resuming from validated epoch={start_epoch}", flush=True)
 
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         net.train()
         total_loss = 0.0
         for images, targets in train_loader:
@@ -173,7 +226,17 @@ def train(args: argparse.Namespace) -> Path:
             loss.backward()
             optimizer.step()
             total_loss += float(loss.item())
-        print(f"epoch={epoch + 1}/{args.epochs} mean_loss={total_loss / len(train_loader):.5f}")
+        print(f"epoch={epoch + 1}/{args.epochs} mean_loss={total_loss / len(train_loader):.5f}", flush=True)
+        # Last completed epoch remains recoverable even if the runner stops later.
+        torch.save({
+            "model_state": net.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "model_id": args.model_id,
+            "dataset_revision": args.revision,
+            "classes": classes,
+            "seed": args.seed,
+            "epoch": epoch + 1,
+        }, checkpoint)
 
     net.eval()
     correct = observed = 0
@@ -183,14 +246,32 @@ def train(args: argparse.Namespace) -> Path:
             correct += int((logits.argmax(1) == targets).sum().item())
             observed += len(targets)
     accuracy = correct / observed if observed else 0.0
-    print(f"held_out_leaf_disjoint_accuracy={accuracy:.4f} n={observed}")
+    print(f"held_out_leaf_disjoint_accuracy={accuracy:.4f} n={observed}", flush=True)
+    # Always preserve truthful metrics, even when the resulting model is rejected.
+    passed = accuracy >= max(args.min_test_accuracy, 0.5)
+    results = {
+        "status": "candidate_accepted_for_license_review" if passed else "rejected_low_accuracy",
+        "model_id": args.model_id,
+        "dataset_id": DATASET_ID, "dataset_revision": args.revision,
+        "physical_leaf_disjoint": True,
+        "classes": classes,
+        "train_examples_by_class": dict(counts),
+        "test_examples_by_class": dict(test_counts),
+        "accuracy": round(accuracy, 6), "test_examples": observed,
+        "minimum_accuracy": args.min_test_accuracy,
+        "epoch_count": args.epochs,
+        "weights_initialized": "from_scratch",
+        "validated_for_botswana": False,
+        "license_verified": False,
+    }
+    (out / (args.model_id + ".evaluation.json")).write_text(
+        json.dumps(results, indent=2) + "\n", encoding="utf-8",
+    )
     if accuracy < args.min_test_accuracy:
         raise ValueError("Held-out test accuracy below required acceptance threshold; weights not published")
     if accuracy < 0.5:
         raise ValueError("Model has not learned sufficiently; not exporting misleading weights")
 
-    out = Path(args.output).resolve()
-    out.mkdir(parents=True, exist_ok=True)
     weights_name = args.model_id + ".onnx"
     labels_name = args.model_id + ".labels.json"
     weights_path = out / weights_name
@@ -232,6 +313,12 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--learning-rate", type=float, default=0.001)
     ap.add_argument("--min-test-accuracy", type=float, default=0.65)
+    ap.add_argument("--max-train-per-class", type=int, default=0,
+                    help="Seeded, class-balanced train cap; 0 means all images")
+    ap.add_argument("--max-test-per-class", type=int, default=0,
+                    help="Seeded, class-balanced held-out cap; 0 means all images")
+    ap.add_argument("--resume-from", default="",
+                    help="Trusted checkpoint from same dataset revision and class order")
     return ap.parse_args()
 
 

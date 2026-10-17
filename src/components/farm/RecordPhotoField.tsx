@@ -152,9 +152,9 @@ export function RecordPhotoField({
         Up to {max} photos. Images are stored privately in your Google Drive;
         your farm record stores their Drive file IDs.
       </AppText>
-      {!readOnly && !connected ? (
+      {!readOnly ? (
         <AppButton
-          title="Connect Google Drive for photos"
+          title={connected ? 'Refresh Google Drive connection' : 'Connect Google Drive for photos'}
           icon="cloud-outline"
           variant="secondary"
           loading={connecting}

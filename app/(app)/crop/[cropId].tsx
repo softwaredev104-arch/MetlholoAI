@@ -6,6 +6,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
@@ -51,6 +52,16 @@ export default function CropDetail() {
         </View>
         <StatusPill label={field.growthStage || 'Not staged'} tone="info" />
       </View>
+
+      {field.photos?.length ? (
+        <AppCard>
+          <RecordPhotoField
+            context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'crops' }}
+            photos={field.photos}
+            label="Crop / field photos"
+          />
+        </AppCard>
+      ) : null}
 
       <AppCard>
         <AppText variant="title2">Field Details</AppText>

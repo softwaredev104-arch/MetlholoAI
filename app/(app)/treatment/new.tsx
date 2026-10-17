@@ -5,6 +5,8 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
+import { uploadRecordPhotos, type PendingPhoto, type StoredPhoto } from '@/services/drive/recordPhotoService';
 import { ChoiceChip, StatusPill } from '@/components/app/ProductUI';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import { createTreatment } from '@/services/treatments/treatmentRepository';
@@ -38,6 +40,8 @@ export default function NewTreatment() {
   const [cost, setCost] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [photos, setPhotos] = useState<StoredPhoto[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [error, setError] = useState('');
 
   const linkedName =
@@ -55,6 +59,10 @@ export default function NewTreatment() {
     setLoading(true);
     setError('');
     try {
+      const uploaded = await uploadRecordPhotos(
+        { ownerId: user.uid, farmId: farm.id, recordType: 'treatments' },
+        pendingPhotos,
+      );
       await createTreatment(user.uid, farm.id, {
         caseId: params.caseId || undefined,
         subjectType: linkedType,
@@ -69,6 +77,7 @@ export default function NewTreatment() {
         cropId: params.cropId || undefined,
         cropName: params.cropName || undefined,
         treatmentName: name.trim(),
+        photos: [...photos, ...uploaded],
         dosage: dosage.trim() || undefined,
         frequency,
         method,
@@ -88,6 +97,8 @@ export default function NewTreatment() {
       } else {
         router.back();
       }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to save treatment evidence.');
     } finally {
       setLoading(false);
     }
@@ -187,6 +198,16 @@ export default function NewTreatment() {
         multiline
         numberOfLines={4}
         placeholder="Treatment notes..."
+      />
+
+      <RecordPhotoField
+        context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'treatments' }}
+        email={user?.email}
+        photos={photos}
+        pending={pendingPhotos}
+        onPhotosChange={setPhotos}
+        onPendingChange={setPendingPhotos}
+        label="Treatment evidence photos"
       />
 
       {notifyVet ? (

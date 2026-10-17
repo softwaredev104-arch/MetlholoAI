@@ -5,6 +5,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
@@ -98,6 +99,14 @@ export default function HealthRecords() {
           return (
             <AppCard key={record.id}>
               <View style={styles.top}>
+                {record.photos?.[0] ? (
+                  <DrivePhotoThumbnail
+                    context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'healthRecords' }}
+                    photo={record.photos[0]}
+                    width={60}
+                    height={60}
+                  />
+                ) : null}
                 <View style={{ flex: 1 }}>
                   <AppText variant="headline">{record.description || record.name}</AppText>
                   <AppText style={{ color: colors.textSecondary }}>

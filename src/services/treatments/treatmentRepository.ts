@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { driveJsonStore } from '@/services/drive/driveJsonStore';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import type { StoredPhoto } from '@/services/drive/recordPhotoService';
 
 export type TreatmentRecord = {
   id: string;
@@ -24,6 +25,7 @@ export type TreatmentRecord = {
   notifyVet?: boolean;
   cost?: number;
   notes?: string;
+  photos?: StoredPhoto[];
   status: 'planned' | 'active' | 'completed';
   createdAt: string;
   updatedAt: string;

@@ -5,6 +5,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
@@ -49,6 +50,14 @@ export default function FeedingPlans() {
         records.map(plan => (
           <AppCard key={plan.id}>
             <View style={styles.top}>
+                {plan.photos?.[0] ? (
+                  <DrivePhotoThumbnail
+                    context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'feedingPlans' }}
+                    photo={plan.photos[0]}
+                    width={60}
+                    height={60}
+                  />
+                ) : null}
               <View style={{ flex: 1 }}>
                 <AppText variant="title3">{plan.animalName || plan.name}</AppText>
                 <AppText style={{ color: colors.textSecondary }}>

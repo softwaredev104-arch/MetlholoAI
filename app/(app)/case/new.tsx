@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image, StyleSheet, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { StyleSheet, View } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
+import { uploadRecordPhotos, type PendingPhoto, type StoredPhoto } from '@/services/drive/recordPhotoService';
 import { ChoiceChip } from '@/components/app/ProductUI';
 import { LocationPicker } from '@/components/ui/LocationPicker';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
@@ -53,7 +54,8 @@ export default function NewCase() {
   const [village, setVillage] = useState('');
   const [location, setLocation] = useState(farm?.location ?? '');
   const [notes, setNotes] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<StoredPhoto[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -78,18 +80,6 @@ export default function NewCase() {
     setSubjectName(name);
   }
 
-  async function addPhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.85,
-      allowsMultipleSelection: true,
-    });
-    if (!result.canceled) {
-      setPhotos(current =>
-        [...current, ...result.assets.map(asset => asset.uri)].slice(0, 5),
-      );
-    }
-  }
 
   async function save() {
     if (!user || !farm) return;
@@ -101,6 +91,10 @@ export default function NewCase() {
     setLoading(true);
     setError('');
     try {
+      const uploaded = await uploadRecordPhotos(
+        { ownerId: user.uid, farmId: farm.id, recordType: 'cases' },
+        pendingPhotos,
+      );
       const created = await createCase(user.uid, farm.id, {
         subjectType,
         subjectId: subjectId || undefined,
@@ -117,13 +111,16 @@ export default function NewCase() {
         village: village.trim() || undefined,
         location: location.trim() || undefined,
         notes: notes.trim() || undefined,
-        photos,
+        photos: [...photos, ...uploaded],
         status: 'open',
       });
       router.replace({
         pathname: '/(app)/case/[caseId]' as any,
         params: { caseId: created.id },
       });
+    } catch (e) {
+      setError((e instanceof Error ? e.message : 'Could not save case photos.') +
+        ' Check existing cases before retrying.');
     } finally {
       setLoading(false);
     }
@@ -217,20 +214,15 @@ export default function NewCase() {
         numberOfLines={5}
       />
 
-      <View style={styles.section}>
-        <AppText variant="headline">Photos</AppText>
-        <AppButton
-          title="Add Photos"
-          variant="secondary"
-          icon="images-outline"
-          onPress={addPhoto}
-        />
-        <View style={styles.photos}>
-          {photos.map(uri => (
-            <Image key={uri} source={{ uri }} style={styles.photo} />
-          ))}
-        </View>
-      </View>
+      <RecordPhotoField
+        context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'cases' }}
+        email={user?.email}
+        photos={photos}
+        pending={pendingPhotos}
+        onPhotosChange={setPhotos}
+        onPendingChange={setPendingPhotos}
+        label="Case evidence photos"
+      />
 
       {error ? <AppText style={{ color: colors.error }}>{error}</AppText> : null}
       <AppButton
@@ -248,6 +240,4 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   grow: { minWidth: 220, flex: 1 },
-  photos: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  photo: { width: 100, height: 100, borderRadius: 14 },
 });

@@ -3,6 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
+import type { PendingPhoto, StoredPhoto } from '@/services/drive/recordPhotoService';
 import { ChoiceChip } from '@/components/app/ProductUI';
 import type { CropFieldRecord } from '@/services/farms/domainRepository';
 import { Spacing } from '@/design/spacing';
@@ -29,6 +31,8 @@ export type CropFormValue = {
   lastInspection: string;
   notes: string;
   status: string;
+  photos: StoredPhoto[];
+  pendingPhotos: PendingPhoto[];
 };
 
 export function CropForm({
@@ -36,10 +40,14 @@ export function CropForm({
   submitLabel = 'Save Field',
   loading = false,
   onSubmit,
+  photoContext,
+  email,
 }: {
   initial?: Partial<CropFieldRecord>;
   submitLabel?: string;
   loading?: boolean;
+  photoContext: { ownerId: string; farmId: string; recordType: 'crops' };
+  email?: string | null;
   onSubmit: (value: CropFormValue) => Promise<void> | void;
 }) {
   const { colors } = useTheme();
@@ -59,6 +67,8 @@ export function CropForm({
   const [lastInspection, setLastInspection] = useState(String(initial?.lastInspection ?? ''));
   const [notes, setNotes] = useState(String(initial?.notes ?? ''));
   const [error, setError] = useState('');
+  const [photos, setPhotos] = useState<StoredPhoto[]>(Array.isArray(initial?.photos) ? initial.photos : []);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
 
   async function submit() {
     if (name.trim().length < 2) {
@@ -81,6 +91,8 @@ export function CropForm({
       lastInspection: lastInspection.trim(),
       notes: notes.trim(),
       status: healthStatus.toLowerCase(),
+      photos,
+      pendingPhotos,
     });
   }
 
@@ -138,6 +150,15 @@ export function CropForm({
       <AppTextField label="Last inspection" value={lastInspection} onChangeText={setLastInspection} placeholder="YYYY-MM-DD" />
       <AppTextField label="Notes" value={notes} onChangeText={setNotes} multiline numberOfLines={4} placeholder="Field notes, observations, issues..." />
 
+      <RecordPhotoField
+        context={photoContext}
+        email={email}
+        photos={photos}
+        pending={pendingPhotos}
+        onPhotosChange={setPhotos}
+        onPendingChange={setPendingPhotos}
+        label="Crop / field photos"
+      />
       {error ? <AppText style={{ color: colors.error }}>{error}</AppText> : null}
       <AppButton title={submitLabel} icon="checkmark" onPress={submit} loading={loading} />
     </View>

@@ -78,3 +78,29 @@ def test_never_reuses_unknown_group_as_shared_physical_leaf():
     second, verified2 = _lookup_leaf_id("raw/color/Corn___healthy/unknown2.jpg", {})
     assert first != second
     assert not verified and not verified2
+
+
+def test_shared_leaf_groups_are_quarantined_from_training_only(tmp_path):
+    train = [
+        "raw/color/Corn___healthy/shared.jpg",
+        "raw/color/Corn___healthy/safe.jpg",
+        "raw/color/Corn___rust/rust.jpg",
+    ]
+    test = [
+        "raw/color/Corn___healthy/test.jpg",
+        "raw/color/Corn___rust/heldout.jpg",
+    ]
+    archive = tmp_path / "quarantine.zip"
+    with zipfile.ZipFile(archive, "w") as z:
+        for path in train + test:
+            z.writestr(path, jpeg())
+    mapping = {
+        "shared": ["leaf-overlap"], "test": ["leaf-overlap"],
+        "safe": ["leaf-safe"], "rust": ["leaf-rust"],
+        "heldout": ["leaf-test-rust"],
+    }
+    training, testing = prepare_splits_from_files(archive, train, test, mapping)
+    assert len(training) == 2
+    assert len(testing) == 2  # Preserve publisher test set intact
+    assert set(training["leaf_id"]).isdisjoint(testing["leaf_id"])
+    assert "leaf-overlap" not in training["leaf_id"]

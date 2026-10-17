@@ -40,7 +40,7 @@ export default function Profile() {
       await driveAuthService.connect({
         ownerId: firebaseUser.uid,
         expectedEmail: firebaseUser.email,
-        prompt: 'select_account',
+        // Reuse the previously granted Drive permission when possible.
       });
       await restoreWorkspaceFromDrive(firebaseUser.uid);
       await refreshProfile();
@@ -159,13 +159,13 @@ export default function Profile() {
             <AppText style={{ color: colors.textSecondary }}>
               {driveConnected
                 ? 'Drive permission is active for this session.'
-                : 'Reconnect Drive when you want new changes synced to your MetlholoAI folder.'}
+                : 'Your previous permission is remembered. Resume Drive sync when you need cloud access.'}
             </AppText>
           </View>
         </View>
         {!driveConnected ? (
           <AppButton
-            title="Reconnect and restore Google Drive"
+            title="Resume Google Drive sync"
             variant="secondary"
             onPress={connectDrive}
             loading={connecting}

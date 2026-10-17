@@ -3,6 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
+import type { PendingPhoto, StoredPhoto } from '@/services/drive/recordPhotoService';
 import { ChoiceChip } from '@/components/app/ProductUI';
 import type { AnimalRecord } from '@/services/farms/domainRepository';
 import { Spacing } from '@/design/spacing';
@@ -27,6 +29,8 @@ export type AnimalFormValue = {
   lastCheckup: string;
   notes: string;
   status: string;
+  photos: StoredPhoto[];
+  pendingPhotos: PendingPhoto[];
 };
 
 export function AnimalForm({
@@ -34,10 +38,14 @@ export function AnimalForm({
   submitLabel = 'Save Animal',
   loading = false,
   onSubmit,
+  photoContext,
+  email,
 }: {
   initial?: Partial<AnimalRecord>;
   submitLabel?: string;
   loading?: boolean;
+  photoContext: { ownerId: string; farmId: string; recordType: 'animals' };
+  email?: string | null;
   onSubmit: (value: AnimalFormValue) => Promise<void> | void;
 }) {
   const { colors } = useTheme();
@@ -62,6 +70,8 @@ export function AnimalForm({
   );
   const [notes, setNotes] = useState(String(initial?.notes ?? ''));
   const [error, setError] = useState('');
+  const [photos, setPhotos] = useState<StoredPhoto[]>(Array.isArray(initial?.photos) ? initial.photos : []);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
 
   async function submit() {
     if (name.trim().length < 2) {
@@ -87,6 +97,8 @@ export function AnimalForm({
       lastCheckup: lastCheckup.trim(),
       notes: notes.trim(),
       status: healthStatus.toLowerCase(),
+      photos,
+      pendingPhotos,
     });
   }
 
@@ -190,6 +202,15 @@ export function AnimalForm({
         numberOfLines={4}
       />
 
+      <RecordPhotoField
+        context={photoContext}
+        email={email}
+        photos={photos}
+        pending={pendingPhotos}
+        onPhotosChange={setPhotos}
+        onPendingChange={setPendingPhotos}
+        label="Animal photos"
+      />
       {error ? <AppText style={{ color: colors.error }}>{error}</AppText> : null}
 
       <AppButton title={submitLabel} icon="checkmark" onPress={submit} loading={loading} />

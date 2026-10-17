@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import { restoreWorkspaceFromDrive } from '@/services/drive/workspaceRecoveryService';
 import {
   recordPhotoService,
   type PendingPhoto,
@@ -97,6 +98,9 @@ export function RecordPhotoField({
         expectedEmail: email,
         prompt: 'select_account',
       });
+      // After renewing Drive permission, always reconcile existing remote
+      // records before any new save can upload a potentially stale snapshot.
+      await restoreWorkspaceFromDrive(context.ownerId);
       setConnected(recordPhotoService.isAvailable());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not connect Google Drive.');

@@ -34,6 +34,19 @@ const pending = {
   mimeType: 'image/jpeg',
 };
 
+// Expo installs fetch as a lazy getter. Reading it in Jest can trigger an
+// asynchronous native-module import after the test is already finished.
+function withFetchMock(mock: typeof fetch) {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true, writable: true, value: mock,
+  });
+  return () => {
+    if (original) Object.defineProperty(globalThis, 'fetch', original);
+    else Reflect.deleteProperty(globalThis, 'fetch');
+  };
+}
+
 beforeEach(() => {
   mockConnected = true;
   mockGetToken.mockClear();
@@ -44,8 +57,7 @@ beforeEach(() => {
 describe('private user-owned Drive image storage', () => {
   it('uploads a real multipart binary with scoped owner/farm metadata', async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = jest.fn(async (url, init) => {
+    const restoreFetch = withFetchMock(jest.fn(async (url, init) => {
       requests.push({ url: String(url), init });
       if (String(url).startsWith('blob:')) {
         return {
@@ -61,7 +73,7 @@ describe('private user-owned Drive image storage', () => {
           mimeType: 'image/jpeg',
         }),
       } as Response;
-    }) as typeof fetch;
+    }) as typeof fetch);
 
     try {
       const result = await recordPhotoService.upload(context, pending);
@@ -80,7 +92,7 @@ describe('private user-owned Drive image storage', () => {
       expect(binary).toContain('metlholoai-folder');
       expect(upload?.init?.headers).toBeTruthy();
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 
@@ -99,8 +111,7 @@ describe('private user-owned Drive image storage', () => {
   });
 
   it('does not fetch a photo belonging to another farm', async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = jest.fn(async () => ({
+    const restoreFetch = withFetchMock(jest.fn(async () => ({
       ok: true,
       json: async () => ({
         mimeType: 'image/jpeg',
@@ -110,7 +121,7 @@ describe('private user-owned Drive image storage', () => {
           recordType: 'animals',
         },
       }),
-    })) as unknown as typeof fetch;
+    })) as unknown as typeof fetch);
     try {
       await expect(recordPhotoService.viewUrl(context, {
         id: 'drive-file-1',
@@ -121,7 +132,7 @@ describe('private user-owned Drive image storage', () => {
       })).rejects.toThrow('not part of the signed-in farm');
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     } finally {
-      globalThis.fetch = originalFetch;
+      restoreFetch();
     }
   });
 });

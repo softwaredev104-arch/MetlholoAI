@@ -96,7 +96,8 @@ export default function Scan() {
   }, [user?.uid]);
   const availableModels = useMemo(
     () => [...INTELLIGENCE_MODELS, ...gatewayModels]
-      .filter(item => item.category === category),
+      .filter(item => item.category === category)
+      .sort((a, b) => Number(modelReady(b)) - Number(modelReady(a))),
     [category, gatewayModels],
   );
   const subjects = useMemo(
@@ -324,6 +325,14 @@ export default function Scan() {
         title="New Scan"
         subtitle="What would you like to scan?"
       />
+      <AppButton
+        title="Review photography introduction"
+        variant="secondary"
+        icon="images-outline"
+        onPress={() => {
+          if (!loading) setIntroCompleted(false);
+        }}
+      />
 
       {params.sourceName ? (
         <AppCard>
@@ -426,7 +435,7 @@ export default function Scan() {
               {subjectModels.map(item => (
                 <ChoiceChip
                   key={item.id}
-                  label={item.name}
+                  label={item.name + (modelReady(item) ? ' · Ready' : ' · Not installed')}
                   selected={model?.id === item.id}
                   onPress={() => {
                     if (loading || model?.id === item.id) return;
@@ -459,7 +468,15 @@ export default function Scan() {
                 ? 'In-project AI model'
                 : 'Existing AI service'} tone="info" />
               {!modelReady(model) ? (
-                <StatusPill label="Not configured" tone="warning" />
+                <>
+                  <StatusPill label="Inference service not installed" tone="warning" />
+                  <AppText style={{ color: colors.textSecondary }}>
+                    This is a catalogue entry, not a working AI model yet.
+                    PlantVillage reference photos and camera tips are available,
+                    but real prediction needs installed licensed weights and
+                    a reachable inference service. Your existing farm data is safe.
+                  </AppText>
+                </>
               ) : null}
               <AppText variant="footnote" style={{ color: colors.textSecondary }}>
                 AI suggestions are not confirmed diagnoses or official outbreak alerts.
@@ -478,14 +495,22 @@ export default function Scan() {
 
           {model && guidedModelId === model.id ? <View style={styles.actions}>
             <AppButton
+              title="Review this model's photo guide"
+              variant="secondary"
+              icon="book-outline"
+              onPress={() => setGuidedModelId('')}
+            />
+            <AppButton
               title="Open Camera"
               icon="camera-outline"
+              disabled={!modelReady(model)}
               onPress={() => choose('camera')}
             />
             <AppButton
               title="Choose Photo"
               icon="images-outline"
               variant="secondary"
+              disabled={!modelReady(model)}
               onPress={() => choose('library')}
             />
           </View> : null}

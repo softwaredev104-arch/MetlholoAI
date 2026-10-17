@@ -129,7 +129,16 @@ export function ModelCaptureGuide({
       />
       <StatusPill label="Step 2 of 2 · Model guidance" tone="info" />
       {photos.length ? (
-        <View style={styles.gallery}>
+        <>
+          <AppCard>
+            <AppText variant="headline">Real PlantVillage reference photographs</AppText>
+            <AppText style={{ color: colors.textSecondary }}>
+              These photos are labelled dataset references, not verified training images
+              for this specific deployed model. They show controlled-background
+              examples; symptoms in the field may look different.
+            </AppText>
+          </AppCard>
+          <View style={styles.gallery}>
           {photos.map(photo => (
             <AppCard key={photo.uri} style={styles.sample}>
               <Image
@@ -153,7 +162,8 @@ export function ModelCaptureGuide({
               />
             </AppCard>
           ))}
-        </View>
+          </View>
+        </>
       ) : (
         <AppCard>
           <AppText variant="headline">Model training examples are not yet verified</AppText>

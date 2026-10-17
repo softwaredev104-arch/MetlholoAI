@@ -5,6 +5,8 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
+import { uploadRecordPhotos, type StoredPhoto, type PendingPhoto } from '@/services/drive/recordPhotoService';
 import { ChoiceChip } from '@/components/app/ProductUI';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
@@ -33,6 +35,9 @@ export default function NewFeedingPlan() {
   const [cost, setCost] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [photos, setPhotos] = useState<StoredPhoto[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (!user || !farm) return;
@@ -42,8 +47,14 @@ export default function NewFeedingPlan() {
   async function save() {
     if (!user || !farm || !animalName || !feedType.trim()) return;
     setLoading(true);
+    setSaveError('');
     try {
+      const uploaded = await uploadRecordPhotos(
+        { ownerId: user.uid, farmId: farm.id, recordType: 'feedingPlans' },
+        pendingPhotos,
+      );
       await farmDomain.feeding.create(user.uid, farm.id, {
+        photos: [...photos, ...uploaded],
         name: animalName + ' feeding plan',
         animalId,
         animalName,
@@ -57,6 +68,8 @@ export default function NewFeedingPlan() {
         status: 'active',
       });
       router.replace('/(app)/feeding-plans' as any);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Unable to save plan.');
     } finally {
       setLoading(false);
     }
@@ -99,6 +112,16 @@ export default function NewFeedingPlan() {
       <AppTextField label="Supplement" value={supplement} onChangeText={setSupplement} placeholder="e.g. Vitamin ADE" />
       <AppTextField label="Daily cost (BWP)" value={cost} onChangeText={setCost} keyboardType="decimal-pad" placeholder="45" />
       <AppTextField label="Notes" value={notes} onChangeText={setNotes} multiline numberOfLines={4} placeholder="Feeding notes..." />
+      <RecordPhotoField
+        context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'feedingPlans' }}
+        email={user?.email}
+        photos={photos}
+        pending={pendingPhotos}
+        onPhotosChange={setPhotos}
+        onPendingChange={setPendingPhotos}
+        label="Feeding plan photos"
+      />
+      {saveError ? <AppText style={{ color: '#C84141' }}>{saveError}</AppText> : null}
       <AppButton title="Save Plan" icon="checkmark" onPress={save} loading={loading} />
     </AppScreen>
   );

@@ -5,6 +5,8 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppButton } from '@/components/ui/AppButton';
+import { RecordPhotoField } from '@/components/farm/RecordPhotoField';
+import { uploadRecordPhotos, type StoredPhoto, type PendingPhoto } from '@/services/drive/recordPhotoService';
 import { ChoiceChip } from '@/components/app/ProductUI';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
@@ -31,6 +33,9 @@ export default function NewHealthRecord() {
   const [cost, setCost] = useState('');
   const [completed, setCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [photos, setPhotos] = useState<StoredPhoto[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (!user || !farm) return;
@@ -40,8 +45,14 @@ export default function NewHealthRecord() {
   async function save() {
     if (!user || !farm || description.trim().length < 2) return;
     setLoading(true);
+    setSaveError('');
     try {
+      const uploaded = await uploadRecordPhotos(
+        { ownerId: user.uid, farmId: farm.id, recordType: 'healthRecords' },
+        pendingPhotos,
+      );
       await farmDomain.health.create(user.uid, farm.id, {
+        photos: [...photos, ...uploaded],
         name: description.trim(),
         description: description.trim(),
         recordType,
@@ -54,6 +65,8 @@ export default function NewHealthRecord() {
         status: completed ? 'completed' : 'scheduled',
       });
       router.replace('/(app)/health-records' as any);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Unable to save record.');
     } finally {
       setLoading(false);
     }
@@ -120,6 +133,16 @@ export default function NewHealthRecord() {
         icon="checkmark-circle-outline"
       />
 
+      <RecordPhotoField
+        context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'healthRecords' }}
+        email={user?.email}
+        photos={photos}
+        pending={pendingPhotos}
+        onPhotosChange={setPhotos}
+        onPendingChange={setPendingPhotos}
+        label="Health record evidence"
+      />
+      {saveError ? <AppText style={{ color: '#C84141' }}>{saveError}</AppText> : null}
       <AppButton title="Save Record" icon="checkmark" onPress={save} loading={loading} />
     </AppScreen>
   );

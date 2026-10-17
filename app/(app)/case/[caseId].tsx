@@ -99,6 +99,12 @@ export default function CaseDetail() {
                   : 'General'
             }
           />
+          {record.verificationStatus === 'farmer_reported' ? (
+            <StatusPill label="Farmer observation · unverified" tone="warning" />
+          ) : null}
+          {record.regionalContribution ? (
+            <StatusPill label="Regional research draft · not submitted" tone="info" />
+          ) : null}
           {record.location ? <StatusPill label={record.location} /> : null}
           {record.district ? <StatusPill label={record.district} /> : null}
           {record.village ? <StatusPill label={record.village} /> : null}

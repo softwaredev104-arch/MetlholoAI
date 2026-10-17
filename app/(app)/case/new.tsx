@@ -16,6 +16,7 @@ import {
   type CropFieldRecord,
 } from '@/services/farms/domainRepository';
 import { createCase } from '@/services/cases/caseRepository';
+import { prepareRegionalObservationDraft } from '@/services/cases/regionalObservation';
 import { listDiagnoses } from '@/services/intelligence/diagnosisRepository';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
@@ -116,6 +117,13 @@ export default function NewCase() {
     setLoading(true);
     setError('');
     try {
+      const regionalDraft = prepareRegional
+        ? prepareRegionalObservationDraft({
+            district, disease, subjectType, status: 'open',
+            animalId: subjectType === 'animal' ? subjectId : undefined,
+            cropId: subjectType === 'crop' ? subjectId : undefined,
+          })
+        : undefined;
       const uploaded = await uploadRecordPhotos(
         { ownerId: user.uid, farmId: farm.id, recordType: 'cases' },
         pendingPhotos,
@@ -133,9 +141,7 @@ export default function NewCase() {
         disease: disease.trim(),
         sourceDiagnosisId: linkedDiagnosisId || undefined,
         verificationStatus: 'farmer_reported',
-        regionalContribution: prepareRegional
-          ? { status: 'draft_not_shared', preparedAt: new Date().toISOString() }
-          : undefined,
+        regionalContribution: regionalDraft,
         severity,
         district: district.trim() || undefined,
         village: village.trim() || undefined,

@@ -57,6 +57,7 @@ export default function NewCase() {
   const [village, setVillage] = useState('');
   const [location, setLocation] = useState(farm?.location ?? '');
   const [notes, setNotes] = useState('');
+  const [symptoms, setSymptoms] = useState('');
   const [photos, setPhotos] = useState<StoredPhoto[]>([]);
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -147,6 +148,7 @@ export default function NewCase() {
         village: village.trim() || undefined,
         location: location.trim() || undefined,
         notes: notes.trim() || undefined,
+        symptoms: symptoms.trim() || undefined,
         photos: [...photos, ...uploaded],
         status: 'open',
       });
@@ -240,6 +242,15 @@ export default function NewCase() {
           />
         </View>
       </View>
+
+      <AppTextField
+        label="Observed symptoms"
+        value={symptoms}
+        onChangeText={setSymptoms}
+        placeholder="Visible signs, onset, frequency, affected animals or crops..."
+        multiline
+        numberOfLines={4}
+      />
 
       <AppTextField
         label="Notes"

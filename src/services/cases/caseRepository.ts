@@ -3,6 +3,7 @@ import { driveJsonStore } from '@/services/drive/driveJsonStore';
 import { driveAuthService } from '@/services/drive/driveAuthService';
 import type { StoredPhoto } from '@/services/drive/recordPhotoService';
 import type { RegionalObservationDraft } from './regionalObservation';
+import type { ProfessionalReviewDraft } from './professionalReview';
 
 export type FarmCase = {
   id: string;
@@ -24,6 +25,8 @@ export type FarmCase = {
   village?: string;
   location?: string;
   notes?: string;
+  symptoms?: string;
+  professionalReview?: ProfessionalReviewDraft;
   photos?: Array<string | StoredPhoto>; // string is legacy local-only URI
   status: 'open' | 'monitoring' | 'resolved';
   createdAt: string;

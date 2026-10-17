@@ -19,6 +19,7 @@ import {
 } from '@/services/treatments/treatmentRepository';
 import { useTheme } from '@/design/themes';
 import { prepareRegionalObservationDraft } from '@/services/cases/regionalObservation';
+import { prepareProfessionalReviewDraft } from '@/services/cases/professionalReview';
 import { Spacing } from '@/design/spacing';
 
 export default function CaseDetail() {
@@ -30,6 +31,8 @@ export default function CaseDetail() {
   const [confirmRegional, setConfirmRegional] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftError, setDraftError] = useState('');
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   async function load() {
     if (!user || !farm || !caseId) return;
@@ -81,6 +84,38 @@ export default function CaseDetail() {
       setDraftError(error instanceof Error ? error.message : 'Unable to discard the draft.');
     } finally {
       setDraftSaving(false);
+    }
+  }
+
+  async function prepareReview() {
+    if (!user || !farm || !record) return;
+    setReviewSaving(true);
+    setReviewError('');
+    try {
+      const draft = prepareProfessionalReviewDraft(record);
+      const updated = await updateCase(user.uid, farm.id, record.id, {
+        professionalReview: draft,
+      });
+      if (!updated) throw new Error('Case not found in your farm records.');
+      await load();
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : 'Could not prepare review draft.');
+    } finally {
+      setReviewSaving(false);
+    }
+  }
+
+  async function discardReview() {
+    if (!user || !farm || !record) return;
+    setReviewSaving(true);
+    setReviewError('');
+    try {
+      await updateCase(user.uid, farm.id, record.id, { professionalReview: undefined });
+      await load();
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : 'Unable to discard review draft.');
+    } finally {
+      setReviewSaving(false);
     }
   }
 
@@ -146,6 +181,12 @@ export default function CaseDetail() {
           {record.district ? <StatusPill label={record.district} /> : null}
           {record.village ? <StatusPill label={record.village} /> : null}
         </View>
+        {record.symptoms ? (
+          <View>
+            <AppText variant="headline">Observed symptoms</AppText>
+            <AppText>{record.symptoms}</AppText>
+          </View>
+        ) : null}
         <AppText style={{ color: colors.textSecondary }}>
           {record.notes || 'No case notes.'}
         </AppText>
@@ -201,6 +242,36 @@ export default function CaseDetail() {
           />
         ) : null}
       </View>
+
+      <SectionHeader title="Professional review" />
+      <AppCard>
+        <AppText variant="headline">Private review request draft</AppText>
+        <AppText style={{ color: colors.textSecondary }}>
+          Prepare your symptoms and case details for a veterinarian or agricultural professional.
+          This only saves a private draft to your existing case and Google Drive backup.
+          No professional is contacted, and no diagnosis is confirmed.
+        </AppText>
+        {record.professionalReview ? (
+          <>
+            <StatusPill label="Draft prepared · not sent" tone="info" />
+            <AppButton
+              title="Discard review draft"
+              variant="secondary"
+              disabled={reviewSaving}
+              onPress={discardReview}
+            />
+          </>
+        ) : (
+          <AppButton
+            title="Prepare review request (not sent)"
+            variant="secondary"
+            icon="document-text-outline"
+            loading={reviewSaving}
+            onPress={prepareReview}
+          />
+        )}
+        {reviewError ? <AppText style={{ color: colors.error }}>{reviewError}</AppText> : null}
+      </AppCard>
 
       <SectionHeader title="Regional observation research" />
       <AppCard>

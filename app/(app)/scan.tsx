@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -20,10 +20,14 @@ import {
 import {
   predict,
   generateReport,
+  listGatewayModels,
+  isGatewayConfigured,
+  modelReady,
   type PredictionResult,
 } from '@/services/intelligence/client';
 import {
   createDiagnosis,
+  attachDiagnosisReport,
   listDiagnoses,
   predictionOutcome,
   type DiagnosisRecord,
@@ -36,7 +40,7 @@ import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 
-type ScanCategory = 'crops' | 'livestock' | 'soil' | 'pests';
+type ScanCategory = 'crops' | 'livestock' | 'fruits' | 'soil' | 'pests';
 
 const categoryCards: Array<{
   key: ScanCategory;
@@ -46,6 +50,7 @@ const categoryCards: Array<{
 }> = [
   { key: 'crops', title: 'Crops', subtitle: 'Leaf disease, blight, viruses and crop damage', icon: 'leaf-outline' },
   { key: 'livestock', title: 'Livestock', subtitle: 'Animal disease and visible health symptoms', icon: 'paw-outline' },
+  { key: 'fruits', title: 'Fruits', subtitle: 'Orchard fruit and plant health', icon: 'nutrition-outline' },
   { key: 'soil', title: 'Soil', subtitle: 'Nutrient and soil workflows', icon: 'earth-outline' },
   { key: 'pests', title: 'Pests', subtitle: 'Insect and infestation workflows', icon: 'bug-outline' },
 ];
@@ -66,12 +71,27 @@ export default function Scan() {
         ? 'crops'
         : 'crops',
   );
+  const [gatewayModels, setGatewayModels] = useState<IntelligenceModel[]>([]);
+  const [gatewayError, setGatewayError] = useState('');
+  const [lastDiagnosisId, setLastDiagnosisId] = useState('');
+  useEffect(() => {
+    if (!user || !isGatewayConfigured()) return;
+    let active = true;
+    listGatewayModels()
+      .then(items => {
+        if (active) { setGatewayModels(items); setGatewayError(''); }
+      })
+      .catch(error => {
+        if (active) setGatewayError(
+          error instanceof Error ? error.message : 'Unable to load local AI models.',
+        );
+      });
+    return () => { active = false; };
+  }, [user?.uid]);
   const availableModels = useMemo(
-    () =>
-      category === 'crops' || category === 'livestock'
-        ? INTELLIGENCE_MODELS.filter(model => model.category === category)
-        : [],
-    [category],
+    () => [...INTELLIGENCE_MODELS, ...gatewayModels]
+      .filter(item => item.category === category),
+    [category, gatewayModels],
   );
   const subjects = useMemo(
     () => Array.from(new Set(availableModels.map(model => model.subject))),
@@ -160,6 +180,7 @@ export default function Scan() {
     try {
       const result = await predict(model, uri);
       setPrediction(result);
+      setLastDiagnosisId('');
 
       const rawConfidence = Number(result.confidence ?? 0);
       const normalizedConfidence =
@@ -189,7 +210,7 @@ export default function Scan() {
               [selectedPhoto],
             )
           : [];
-        await createDiagnosis({
+        const saved = await createDiagnosis({
           ownerId: user.uid,
           farmId: farm.id,
           sourceRecordType:
@@ -202,8 +223,14 @@ export default function Scan() {
           subject: model.subject,
           outcome: predictionOutcome(result, model),
           confidence: normalizedConfidence,
+          candidates: result.candidates,
+          provider: result.provider ?? model.provider ?? 'legacy',
+          modelVersion: result.modelVersion,
+          validatedForBotswana: result.validatedForBotswana === true,
+          reviewStatus: 'ai_suggestion',
           image: uploaded[0],
         });
+        setLastDiagnosisId(saved.id);
         setPhotoNotice(uploaded.length
           ? 'Diagnostic photo stored in your Google Drive.'
           : 'Diagnosis saved, but its photo was not uploaded. Connect Google Drive to preserve future scan photos.');
@@ -233,9 +260,15 @@ export default function Scan() {
         disease,
         confidence: Number(prediction.confidence ?? 0),
         country: 'Botswana',
+        district: undefined,
         cropOrAnimal: model.subject,
       });
-      setReport(result.structuredReport ?? result.report ?? result);
+      const generated = result.structuredReport ?? result.report ?? result;
+      setReport(generated);
+      if (user && farm && lastDiagnosisId) {
+        await attachDiagnosisReport(user.uid, farm.id, lastDiagnosisId, generated);
+        await loadRecent();
+      }
     } catch (error) {
       Alert.alert(
         'Report failed',
@@ -256,6 +289,7 @@ export default function Scan() {
     setPrediction(null);
     setReport(null);
     setReference(null);
+    setLastDiagnosisId('');
   }
 
   return (
@@ -280,7 +314,7 @@ export default function Scan() {
       <View style={styles.categoryGrid}>
         {categoryCards.map(item => {
           const selected = category === item.key;
-          const supported = item.key === 'crops' || item.key === 'livestock';
+          const supported = item.key !== 'soil' && (item.key === 'crops' || item.key === 'livestock' || availableModels.length > 0 || gatewayModels.some(model => model.category === item.key));
           return (
             <AppCard
               key={item.key}
@@ -318,18 +352,23 @@ export default function Scan() {
         })}
       </View>
 
-      {category === 'soil' || category === 'pests' ? (
+      {category === 'soil' || availableModels.length === 0 ? (
         <AppCard>
           <AppText variant="headline">This model family is not connected yet</AppText>
           <AppText style={{ color: colors.textSecondary }}>
-            The screen is implemented from the product specification, but MetlholoAI will only enable diagnosis when a real soil or pest endpoint is configured.
+            The model family remains unavailable until a licensed model and working inference service are installed. Existing scans and farm records are unaffected.
           </AppText>
         </AppCard>
       ) : (
         <>
+          {gatewayError ? (
+            <AppCard>
+              <AppText style={{ color: colors.textSecondary }}>Local model service: {gatewayError}</AppText>
+            </AppCard>
+          ) : null}
           <View style={styles.section}>
             <AppText variant="headline">
-              Choose {category === 'crops' ? 'crop' : 'animal'}
+              Choose {category === 'livestock' ? 'animal' : category === 'pests' ? 'pest host' : category === 'fruits' ? 'fruit' : 'crop'}
             </AppText>
             <View style={styles.pills}>
               {subjects.map(item => (
@@ -359,7 +398,15 @@ export default function Scan() {
 
           {model ? (
             <AppCard>
-              <StatusPill label="AI Diagnostic Tip" tone="info" />
+              <StatusPill label={model.provider === 'gateway'
+                ? 'In-project AI model'
+                : 'Existing AI service'} tone="info" />
+              {!modelReady(model) ? (
+                <StatusPill label="Not configured" tone="warning" />
+              ) : null}
+              <AppText variant="footnote" style={{ color: colors.textSecondary }}>
+                AI suggestions are not confirmed diagnoses or official outbreak alerts.
+              </AppText>
               <AppText variant="headline">{model.subject} · {model.name}</AppText>
               <AppText style={{ color: colors.textSecondary }}>
                 Use a well-lit, sharp image and keep the affected area clearly visible.
@@ -398,6 +445,7 @@ export default function Scan() {
               title="Run Diagnosis"
               icon="scan-outline"
               loading={loading}
+              disabled={!modelReady(model)}
               onPress={runPrediction}
             />
           ) : null}
@@ -410,7 +458,7 @@ export default function Scan() {
 
       {prediction && model ? (
         <AppCard>
-          <StatusPill label="Diagnosis" tone="success" />
+          <StatusPill label="AI-suggested finding · not confirmed" tone="warning" />
           <AppText variant="largeTitle">
             {String(
               prediction.disease ?? prediction.prediction ?? 'Unknown',
@@ -425,6 +473,17 @@ export default function Scan() {
             loading={loading}
             onPress={createReport}
           />
+          {lastDiagnosisId ? (
+            <AppButton
+              title="Create farm case from this finding"
+              variant="secondary"
+              icon="document-text-outline"
+              onPress={() => router.push({
+                pathname: '/(app)/case/new' as any,
+                params: { diagnosisId: lastDiagnosisId },
+              })}
+            />
+          ) : null}
         </AppCard>
       ) : null}
 

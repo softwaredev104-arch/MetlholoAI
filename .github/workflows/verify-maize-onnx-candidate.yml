@@ -1,0 +1,94 @@
+name: Verify Trained Maize ONNX Research Artifact
+
+# Independent runtime integrity check of a completed real training artifact.
+# Neither the manifest nor any weights are installed into production.
+on:
+  push:
+    branches: [feat/diagnostics-model-gateway]
+    paths: ['.github/workflows/verify-maize-onnx-candidate.yml']
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Verified training workflow run ID'
+        required: true
+        default: '39059446470'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SOURCE_RUN: ${{ inputs.source_run_id || '39059446470' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch intact training artifact (not active application code)
+        run: |
+          mkdir -p candidate
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name "plantvillage-maize-research-candidate-$SOURCE_RUN" --dir candidate
+      - name: Install CPU ONNX verification libraries
+        run: python -m pip install "onnx>=1.17,<2" "onnxruntime>=1.19,<2" "numpy>=1.26,<3"
+      - name: Validate trained model structure, labels and CPU inference
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import numpy as np
+          import onnx
+          import onnxruntime as ort
+
+          root = Path("candidate/models")
+          model_id = "plantvillage-maize-transfer-pilot-v1"
+          manifest = json.loads((root / f"{model_id}.manifest.json").read_text())
+          results = json.loads((root / f"{model_id}.evaluation.json").read_text())
+          labels = json.loads((root / f"{model_id}.labels.json").read_text())
+          weights = root / f"{model_id}.onnx"
+          assert hashlib.sha256(weights.read_bytes()).hexdigest() == manifest["weights_sha256"]
+          assert len(labels) == manifest["class_count"] == 4
+          assert results["test_examples"] == 320
+          assert results["accuracy"] == 0.93125
+          assert results["status"] == "candidate_accepted_for_license_review"
+          assert manifest["license_verified"] is False
+          assert manifest["validated_for_botswana"] is False
+          graph = onnx.load(str(weights))
+          onnx.checker.check_model(graph)
+          session = ort.InferenceSession(str(weights), providers=["CPUExecutionProvider"])
+          name = session.get_inputs()[0].name
+          outputs = []
+          for value in (0.0, 0.5):
+              inputs = np.full((1, 3, 224, 224), value, dtype=np.float32)
+              prediction = session.run(None, {name: inputs})[0]
+              assert prediction.shape == (1, len(labels))
+              assert np.isfinite(prediction).all()
+              outputs.append(prediction)
+          verification = {
+              "source_run_id": "39059446470",
+              "model_id": model_id,
+              "status": "onnx_runtime_smoke_passed_not_production_approved",
+              "weights_sha256": manifest["weights_sha256"],
+              "held_out_accuracy": results["accuracy"],
+              "class_count": len(labels),
+              "onnx_cpu_shapes_valid": True,
+              "licensing_verified": False,
+              "botswana_field_validated": False,
+          }
+          Path("candidate/onnx-verification.json").write_text(
+              json.dumps(verification, indent=2) + "\n")
+          print(json.dumps(verification, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maize-onnx-cpu-verification-${{ github.run_id }}
+          path: candidate/onnx-verification.json
+          retention-days: 30
+          if-no-files-found: warn

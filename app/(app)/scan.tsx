@@ -6,6 +6,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppButton } from '@/components/ui/AppButton';
+import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
+import {
+  recordPhotoService,
+  uploadRecordPhotos,
+  type PendingPhoto,
+} from '@/services/drive/recordPhotoService';
 import { AppCard } from '@/components/ui/AppCard';
 import {
   INTELLIGENCE_MODELS,
@@ -85,6 +91,8 @@ export default function Scan() {
     subjectModels.find(item => item.id === modelId) ?? subjectModels[0];
 
   const [uri, setUri] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<PendingPhoto | null>(null);
+  const [photoNotice, setPhotoNotice] = useState('');
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [report, setReport] = useState<any>(null);
   const [reference, setReference] = useState<DiagnosisReference | null>(null);
@@ -132,6 +140,13 @@ export default function Scan() {
       const asset = result.assets.at(0);
       if (!asset) return;
       setUri(asset.uri);
+      setSelectedPhoto({
+        uri: asset.uri,
+        name: asset.fileName || 'Diagnosis photo.jpg',
+        mimeType: asset.mimeType || 'image/jpeg',
+        size: asset.fileSize,
+      });
+      setPhotoNotice('');
       setPrediction(null);
       setReport(null);
       setReference(null);
@@ -167,6 +182,13 @@ export default function Scan() {
       }
 
       if (user && farm) {
+        const canSaveImage = recordPhotoService.isAvailable();
+        const uploaded = canSaveImage && selectedPhoto
+          ? await uploadRecordPhotos(
+              { ownerId: user.uid, farmId: farm.id, recordType: 'diagnoses' },
+              [selectedPhoto],
+            )
+          : [];
         await createDiagnosis({
           ownerId: user.uid,
           farmId: farm.id,
@@ -180,8 +202,11 @@ export default function Scan() {
           subject: model.subject,
           outcome: predictionOutcome(result, model),
           confidence: normalizedConfidence,
-          imageUri: uri,
+          image: uploaded[0],
         });
+        setPhotoNotice(uploaded.length
+          ? 'Diagnostic photo stored in your Google Drive.'
+          : 'Diagnosis saved, but its photo was not uploaded. Connect Google Drive to preserve future scan photos.');
         await loadRecent();
       }
     } catch (error) {
@@ -226,6 +251,8 @@ export default function Scan() {
   function selectCategory(next: ScanCategory) {
     setCategory(next);
     setUri(null);
+    setSelectedPhoto(null);
+    setPhotoNotice('');
     setPrediction(null);
     setReport(null);
     setReference(null);
@@ -360,6 +387,11 @@ export default function Scan() {
           </View>
 
           {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
+          {uri && !recordPhotoService.isAvailable() ? (
+            <AppText style={{ color: colors.warning }}>
+              Google Drive is disconnected. Diagnosis results can still be saved, but the image will not be available on another device.
+            </AppText>
+          ) : null}
 
           {uri && model ? (
             <AppButton
@@ -371,6 +403,10 @@ export default function Scan() {
           ) : null}
         </>
       )}
+
+      {photoNotice ? (
+        <AppText style={{ color: colors.textSecondary }}>{photoNotice}</AppText>
+      ) : null}
 
       {prediction && model ? (
         <AppCard>
@@ -442,6 +478,14 @@ export default function Scan() {
         recent.map(item => (
           <AppCard key={item.id}>
             <View style={styles.recentRow}>
+              {item.image ? (
+                <DrivePhotoThumbnail
+                  context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'diagnoses' }}
+                  photo={item.image}
+                  width={58}
+                  height={58}
+                />
+              ) : null}
               <View style={{ flex: 1 }}>
                 <AppText variant="headline">{item.sourceName}</AppText>
                 <AppText style={{ color: colors.textSecondary }}>

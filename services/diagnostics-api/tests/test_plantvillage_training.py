@@ -71,3 +71,19 @@ def test_seeded_class_balanced_sampling_retains_real_source_indices():
 def test_no_training_sampling_without_real_class_images():
     with pytest.raises(ValueError, match="zero source images"):
         sample_by_class([0, 0, 1], {0: 0, 4: 1}, limit=2, seed=42)
+
+
+def test_pretrained_backbone_manifest_remains_unapproved():
+    manifest = proposed_manifest(
+        model_id="plantvillage-maize-transfer-v1", weights_name="candidate.onnx",
+        weights_sha256=WEIGHTS, labels_name="labels.json",
+        data_revision=SHA, classes=CLASSES[:2],
+        counts={CLASSES[0]: 25, CLASSES[1]: 25},
+        metrics={"test_accuracy": 0.85, "test_examples": 20},
+        crop_names=["maize"], training_seed=42, epochs=6,
+        initialization="torchvision_mobilenet_v3_small_imagenet1k_v1",
+    )
+    assert manifest["initialization"] == "torchvision_mobilenet_v3_small_imagenet1k_v1"
+    assert manifest["transfer_learning_requires_independent_rights_review"] is True
+    assert manifest["license_verified"] is False
+    assert manifest["validated_for_botswana"] is False

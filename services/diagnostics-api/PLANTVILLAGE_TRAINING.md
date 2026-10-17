@@ -77,3 +77,57 @@ Configure Firebase Admin credentials and CORS for any public HTTPS deployment;
 never enable `METLHOLO_DEV_NO_AUTH` publicly. Existing model records and
 legacy endpoints are preserved. Static Cloudflare Workers cannot execute
 this Python/ONNX FastAPI service; you must provide an HTTPS Python host.
+
+
+## October 2026 interruption recovery and GitHub training runner
+
+The first bounded maize run is executed by
+[`Train PlantVillage Maize Research Candidate`](../../.github/workflows/train-plantvillage-pilot.yml)
+on introduction of that workflow to `feat/diagnostics-model-gateway`.
+Later runs are manually started from the GitHub Actions workflow page with
+the supported crop and a chosen epoch count.
+
+What happens in a **real** training run:
+
+- Hugging Face returns a concrete 40-character revision, recorded in
+  `dataset-revision.txt`; train and held-out test both use that revision.
+- Official PlantVillage **physical-leaf-disjoint** train/test splits are
+  retained; train/test membership is never rebuilt by splitting individual
+  photographs. The pilot caps counts per class after the official split.
+- Training uses CPU MobileNetV3-Small from scratch and real dataset labels.
+  It does not reuse existing Teachable Machine weights or invent metrics.
+- Each completed epoch writes a trusted `*.checkpoint.pt` containing model
+  and optimizer weights, class order, dataset revision, seed and epoch.
+  Resume is supported with `--resume-from` for the **same** model, classes,
+  seed, revision and a higher total `--epochs`. Only load checkpoints
+  created by this trusted workflow.
+- An `*.evaluation.json` records accuracy, class counts and pass/fail status
+  even when held-out accuracy is below the minimum. A rejected run does not
+  export an ONNX candidate.
+- An accepted run produces versioned `*.onnx`, `*.labels.json`,
+  `*.manifest.json`, and a checksum. The workflow retains these outputs as
+  GitHub Actions **artifacts** for 30 days, not source-control commits.
+- **No new model is automatically placed in the live registry**. License
+  obligations, Botswana field-image validation, professional review and a
+  separately deployed inference server remain prerequisites.
+
+The bounded pilot is deliberately smaller than a production study. Its
+held-out accuracy is a *screening* number, not independent local field
+validation. Train with the full official split and repeat independent
+evaluation before requesting production approval.
+
+### Legacy weights and training-image limitations
+
+Older `loetolex/Botswana-Agricultural-Intelligence-Platform-*` repositories
+contain TensorFlow.js Teachable Machine `model.json`, `weights.bin`, and
+`metadata.json` bundles with existing class labels. These are **already
+trained weights**, not the original labelled images, optimizer states or
+training logs. They cannot simply be 'trained again' without separately
+obtaining labelled datasets and documenting licenses. In particular, several
+cattle workflow paths point to identical binary weights. Treat those as the
+same underlying classifier until independently evaluated. Those bundles are
+not replaced or activated by this PlantVillage run.
+
+For pest, cattle and poultry training, source a separate species-appropriate
+licensed dataset with sound class definitions and a clean hold-out. PlantVillage
+crop images must not be relabelled as animal disease or pest images.

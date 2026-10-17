@@ -45,6 +45,27 @@ Set \`EXPO_PUBLIC_AI_GATEWAY_URL=https://YOUR-DIAGNOSTICS-SERVICE\`
 in the Expo build. No Roboflow API key or Firebase Admin credential belongs in
 an \`EXPO_PUBLIC_\` variable.
 
+## Reproducible first public-weight candidate: maize/cassava/bean leaves
+
+The in-repository installer supports a small [MIT-labelled crop model](https://huggingface.co/Gopina/maize-disease-classifier) containing **real ONNX weights** (approx. 3.8 MB). Its published classes are `healthy`, `maize_rust`, `maize_blight`, `cassava_mosaic` and `bean_spot`.
+
+The published model uses a **224×224 NHWC float32 RGB input divided by 255**; the ONNX adapter now supports this layout, in addition to existing NCHW/ImageNet models.
+
+**Important limitations:** The model author's model card claims perfect test metrics that we have not independently reproduced; it also explicitly notes synthetic augmentation for the bean class. Model licensing is described as MIT on the source card, but **training-dataset usage rights and dependency obligations still require review**. Do not treat this as Botswana-validated, medically definitive, or an official pest/disease report.
+
+```bash
+cd services/diagnostics-api
+python scripts/install_public_models.py
+# Verifies SHA-256, installs the model weights and label order.
+# The registry is deliberately NOT enabled without licensing approval.
+
+# After reviewing the source, dataset, dependencies and intended use:
+python scripts/install_public_models.py --acknowledge-licensing
+METLHOLO_MODEL_REGISTRY_PATH=registry.approved.json uvicorn app:app --host 127.0.0.1 --port 8011
+```
+
+The script pins the downloaded ONNX SHA-256 and refuses mismatches, places the file in the gitignored model directory, writes a locally approved registry, and leaves `validated_for_botswana: false`. The running server lists this model as ready **only if** the validated bytes and approved registry are present. The model cannot be run inside a static Cloudflare asset; run this service on a Python host. No runtime model download is performed on farmers' devices.
+
 ## Register an actual model
 
 1. Examine the source repository, model weights' license, dataset license,

@@ -212,7 +212,7 @@ export const driveAuthService = {
     const prompt = options.prompt ??
       (options.ownerId && rememberedGrantOwners.has(options.ownerId) ? '' : 'consent');
     return requestToken({ ...options, prompt });
-  }
+  },
 
   async restore(options: Omit<ConnectOptions, 'prompt'> & { force?: boolean }) {
     if (Platform.OS !== 'web' || !isGoogleDriveConfigured) return false;

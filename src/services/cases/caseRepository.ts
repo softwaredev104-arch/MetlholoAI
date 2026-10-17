@@ -15,6 +15,8 @@ export type FarmCase = {
   cropId?: string;
   cropName?: string;
   disease: string;
+  sourceDiagnosisId?: string;
+  verificationStatus?: 'farmer_reported' | 'expert_reviewed' | 'officially_confirmed';
   severity: 'Mild' | 'Moderate' | 'Severe' | 'Critical';
   district?: string;
   village?: string;

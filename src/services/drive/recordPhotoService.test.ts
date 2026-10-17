@@ -44,14 +44,14 @@ beforeEach(() => {
 describe('private user-owned Drive image storage', () => {
   it('uploads a real multipart binary with scoped owner/farm metadata', async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
-    const originalFetch = global.fetch;
-    global.fetch = jest.fn(async (url, init) => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn(async (url, init) => {
       requests.push({ url: String(url), init });
       if (String(url).startsWith('blob:')) {
         return {
           ok: true,
           blob: async () => new Blob(['image-binary'], { type: 'image/jpeg' }),
-        } as Response;
+        } as unknown as Response;
       }
       return {
         ok: true,
@@ -80,7 +80,7 @@ describe('private user-owned Drive image storage', () => {
       expect(binary).toContain('metlholoai-folder');
       expect(upload?.init?.headers).toBeTruthy();
     } finally {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     }
   });
 
@@ -99,8 +99,8 @@ describe('private user-owned Drive image storage', () => {
   });
 
   it('does not fetch a photo belonging to another farm', async () => {
-    const originalFetch = global.fetch;
-    global.fetch = jest.fn(async () => ({
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn(async () => ({
       ok: true,
       json: async () => ({
         mimeType: 'image/jpeg',
@@ -110,7 +110,7 @@ describe('private user-owned Drive image storage', () => {
           recordType: 'animals',
         },
       }),
-    })) as typeof fetch;
+    })) as unknown as typeof fetch;
     try {
       await expect(recordPhotoService.viewUrl(context, {
         id: 'drive-file-1',
@@ -119,9 +119,9 @@ describe('private user-owned Drive image storage', () => {
         size: 10,
         createdAt: '2026-10-17T10:00:00.000Z',
       })).rejects.toThrow('not part of the signed-in farm');
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     } finally {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     }
   });
 });

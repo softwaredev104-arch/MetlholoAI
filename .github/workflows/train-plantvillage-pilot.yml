@@ -20,7 +20,7 @@ on:
         description: 'Epoch count for the reproducible pilot'
         type: choice
         options: ['3', '6', '12']
-        default: '3'
+        default: '6'
         required: true
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
       TOKENIZERS_PARALLELISM: 'false'
       OMP_NUM_THREADS: '2'
       CROP: ${{ inputs.crop || 'maize' }}
-      EPOCHS: ${{ inputs.epochs || '3' }}
+      EPOCHS: ${{ inputs.epochs || '6' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -75,7 +75,8 @@ jobs:
           python -u -m scripts.train_plantvillage \
             --revision "$REVISION" \
             --crop "$CROP" \
-            --model-id "plantvillage-${CROP}-pilot-v1" \
+            --model-id "plantvillage-${CROP}-transfer-pilot-v1" \
+            --backbone imagenet1k_v1 \
             --epochs "$EPOCHS" \
             --batch-size 24 \
             --workers 0 \

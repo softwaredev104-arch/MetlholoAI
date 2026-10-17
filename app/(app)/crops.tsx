@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/AppText';
 import { AppTextField } from '@/components/ui/AppTextField';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
   farmDomain,
@@ -119,7 +120,16 @@ export default function Crops() {
           >
             <View style={styles.top}>
               <View style={[styles.icon, { backgroundColor: colors.primarySubtle }]}>
-                <Ionicons name="leaf" size={25} color={colors.primary} />
+                {field.photos?.length ? (
+                  <DrivePhotoThumbnail
+                    context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'crops' }}
+                    photo={field.photos[0]!}
+                    width={48}
+                    height={48}
+                  />
+                ) : (
+                  <Ionicons name="leaf" size={25} color={colors.primary} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <AppText variant="title3">{field.name}</AppText>

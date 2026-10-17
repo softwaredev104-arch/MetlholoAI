@@ -129,9 +129,23 @@ def prepare_splits_from_files(
     ids = {label: index for index, label in enumerate(labels)}
     with zipfile.ZipFile(archive_path) as archive:
         members = set(archive.namelist())
-        # Check the precise source files exist before the first training epoch.
-        train_keys = [_archive_key(p, members) for p in train_paths]
-        test_keys = [_archive_key(p, members) for p in test_paths]
+        # Determine an optional ZIP root prefix ONCE. Scanning all 54k+
+        # member names for every photo would be quadratic and extremely slow.
+        first = train_paths[0]
+        if first in members:
+            prefix = ""
+        else:
+            candidates = [
+                name[: -len(first)] for name in members
+                if name.endswith("/" + first)
+            ]
+            if len(candidates) != 1:
+                raise ValueError("Cannot find unambiguous original RGB archive root")
+            prefix = candidates[0]
+        train_keys = [prefix + path for path in train_paths]
+        test_keys = [prefix + path for path in test_paths]
+        if any(key not in members for key in train_keys + test_keys):
+            raise ValueError("Official split lists reference missing archive images")
 
     def split(paths: list[str], keys: list[str]) -> ArchiveSplit:
         group_data = [_lookup_leaf_id(p, leaf_map) for p in paths]

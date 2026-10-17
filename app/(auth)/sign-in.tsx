@@ -4,7 +4,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
-import { AppTextField } from '@/components/ui/AppTextField';
+import { CredentialForm } from '@/components/auth/CredentialForm';
+import type { CredentialFields } from '@/components/auth/CredentialForm.types';
 import { AppButton } from '@/components/ui/AppButton';
 import { authService } from '@/services/auth/authService';
 import { getFriendlyErrorMessage } from '@/utils/errorMessage';
@@ -15,8 +16,6 @@ const schema = z.object({ email: z.string().email(), password: z.string().min(6)
 
 export default function SignIn() {
   const { colors } = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -36,7 +35,7 @@ export default function SignIn() {
     return () => { active = false; };
   }, []);
 
-  async function submit() {
+  async function submit({ email, password, displayName }: CredentialFields) {
     setError('');
     const parsed = schema.safeParse({ email, password });
     if (!parsed.success) {
@@ -97,23 +96,11 @@ export default function SignIn() {
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
-          <AppTextField
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
-          <AppTextField
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="password"
-            textContentType="password"
-            onSubmitEditing={submit}
+          <CredentialForm
+            mode="sign-in"
+            submitting={loading}
+            disabled={googleLoading}
+            onSubmit={submit}
           />
 
           {error ? (
@@ -126,19 +113,18 @@ export default function SignIn() {
             </AppText>
           ) : null}
 
-          <AppButton
-            title="Sign In"
-            onPress={submit}
-            loading={loading}
-            disabled={googleLoading}
-          />
-
           <Link href="/(auth)/forgot-password" style={{ textAlign: 'center', color: colors.primary }}>
             Forgot password?
           </Link>
           <Link href="/(auth)/sign-up" style={{ textAlign: 'center', color: colors.primary }}>
             Create an account
           </Link>
+          {Platform.OS === 'web' ? (
+            <AppText variant="footnote" style={{ color: colors.textTertiary, textAlign: 'center' }}>
+              Safari and your password manager can offer to save or fill your email and password.
+              MetlholoAI never stores your password itself.
+            </AppText>
+          ) : null}
         </View>
       </View>
     </AppScreen>

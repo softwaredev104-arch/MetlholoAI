@@ -16,7 +16,7 @@ export type RegionalObservationDraft = {
 };
 
 export function prepareRegionalObservationDraft(
-  record: Pick<FarmCase, 'district' | 'disease' | 'subjectType' | 'animalId' | 'cropId' | 'status'>,
+  record: Pick<FarmCase, 'district' | 'disease' | 'subjectType' | 'animalId' | 'cropId' | 'status' | 'severity'>,
   preparedAt = new Date().toISOString(),
 ): RegionalObservationDraft {
   const district = record.district?.trim();

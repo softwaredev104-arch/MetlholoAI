@@ -18,6 +18,12 @@ export type DiagnosisRecord = {
   outcome: string;
   confidence: number;
   report?: unknown;
+  updatedAt?: string;
+  candidates?: Array<{ label: string; confidence: number }>;
+  provider?: string;
+  modelVersion?: string;
+  validatedForBotswana?: boolean;
+  reviewStatus?: 'ai_suggestion' | 'pending_expert_review' | 'expert_reviewed';
   imageUri?: string; // legacy local URI; not portable across devices
   image?: StoredPhoto;
   createdAt: string;
@@ -68,6 +74,23 @@ export async function createDiagnosis(
   };
   await persist(input.ownerId, input.farmId, [record, ...records]);
   return record;
+}
+
+export async function attachDiagnosisReport(
+  ownerId: string,
+  farmId: string,
+  diagnosisId: string,
+  report: unknown,
+): Promise<DiagnosisRecord> {
+  const records = await read(ownerId, farmId);
+  const index = records.findIndex(
+    item => item.id === diagnosisId && item.ownerId === ownerId && item.farmId === farmId,
+  );
+  if (index < 0) throw new Error('Saved diagnosis not found; report was not attached.');
+  const updated = { ...records[index]!, report, updatedAt: new Date().toISOString() };
+  records[index] = updated;
+  await persist(ownerId, farmId, records);
+  return updated;
 }
 
 export async function listDiagnoses(ownerId: string, farmId: string) {

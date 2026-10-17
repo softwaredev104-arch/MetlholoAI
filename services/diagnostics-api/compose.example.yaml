@@ -1,0 +1,29 @@
+# Local model deployment only. Put HTTPS auth and Firebase Admin credentials
+# in front of the gateway before making it reachable from the internet.
+services:
+  diagnostics:
+    build: .
+    ports:
+      - "127.0.0.1:8011:8011"
+    environment:
+      METLHOLO_ENV: development
+      METLHOLO_DEV_NO_AUTH: "false"
+      METLHOLO_MODEL_REGISTRY_PATH: registry.json
+      METLHOLO_ROBOFLOW_INFERENCE_URL: http://roboflow:9001
+      METLHOLO_ALLOWED_ORIGINS: http://localhost:8081
+      ROBOFLOW_API_KEY: ${ROBOFLOW_API_KEY:-}
+    volumes:
+      - ./models:/app/models:ro
+      # If using a verified registry, mount it over /app/registry.json.
+      # - ./registry.approved.json:/app/registry.json:ro
+    depends_on:
+      - roboflow
+  roboflow:
+    # Pin a verified image digest before public deployment.
+    image: roboflow/roboflow-inference-server-cpu:latest
+    expose:
+      - "9001"
+    volumes:
+      - rf_cache:/tmp
+volumes:
+  rf_cache:

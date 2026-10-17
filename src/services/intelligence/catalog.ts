@@ -1,4 +1,4 @@
-export type IntelligenceCategory = 'crops' | 'livestock';
+export type IntelligenceCategory = 'crops' | 'livestock' | 'fruits' | 'pests';
 
 export type IntelligenceModel = {
   id: string;
@@ -11,6 +11,10 @@ export type IntelligenceModel = {
   reportPath: string;
   input: 'image';
   trainingImageHints: string[];
+  provider?: 'legacy' | 'gateway';
+  configured?: boolean;
+  validatedForBotswana?: boolean;
+  reviewRequired?: boolean;
 };
 
 export const INTELLIGENCE_SERVICES = {
@@ -33,7 +37,7 @@ export const INTELLIGENCE_MODELS: IntelligenceModel[] = [
   { id: 'maize-streak-virus', name: 'Streak Virus', category: 'crops', subject: 'Maize', disease: 'Streak Virus', service: 'maize', predictPath: '/api/crops/maize/streak-virus/predict', reportPath: '/api/crops/maize/streak-virus/generate-report', input: 'image', trainingImageHints: ['leaf veins and streaking', 'fill frame', 'sharp detail'] },
   { id: 'cattle-foot-mouth', name: 'Foot and Mouth Disease', category: 'livestock', subject: 'Cattle', disease: 'Foot and Mouth Disease', service: 'cattle', predictPath: '/api/livestock/cattle/foot-and-mouth-disease/predict', reportPath: '/api/livestock/cattle/foot-and-mouth-disease/generate-report', input: 'image', trainingImageHints: ['affected mouth/foot area', 'safe distance', 'clear daylight'] },
   { id: 'cattle-lumpy-skin', name: 'Lumpy Skin Disease', category: 'livestock', subject: 'Cattle', disease: 'Lumpy Skin Disease', service: 'cattle', predictPath: '/api/livestock/cattle/lumpy-skin-disease/predict', reportPath: '/api/livestock/cattle/lumpy-skin-disease/generate-report', input: 'image', trainingImageHints: ['skin lesions', 'multiple lesions if safe', 'sharp close detail'] },
-  { id: 'poultry-faeces', name: 'Poultry Faeces', category: 'livestock', subject: 'Chicken', service: 'cattle', predictPath: '/api/livestock/poultry/predict', reportPath: '/api/livestock/poultry/generate-report', input: 'image', trainingImageHints: ['sample clearly visible', 'top-down view', 'even lighting'] },
+  { id: 'poultry-faeces', name: 'Poultry Faeces', category: 'livestock', subject: 'Chicken', service: 'poultry', predictPath: '/api/livestock/poultry/predict', reportPath: '/api/livestock/poultry/generate-report', input: 'image', trainingImageHints: ['sample clearly visible', 'top-down view', 'even lighting'] },
   { id: 'tomato-spider-mites', name: 'Spider Mites', category: 'crops', subject: 'Tomato', disease: 'Spider Mites', service: 'tomato', predictPath: '/api/crops/tomato/Spider_mites/predict', reportPath: '/api/crops/tomato/Spider_mites/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
   { id: 'tomato-yellow-leaf-curl-virus', name: 'Yellow Leaf Curl Virus', category: 'crops', subject: 'Tomato', disease: 'Yellow Leaf Curl Virus', service: 'tomato', predictPath: '/api/crops/tomato/Yellow_Leaf_Curl_Virus/predict', reportPath: '/api/crops/tomato/Yellow_Leaf_Curl_Virus/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
   { id: 'tomato-leaf-blight', name: 'Leaf Blight', category: 'crops', subject: 'Tomato', disease: 'Leaf Blight', service: 'tomato', predictPath: '/api/crops/tomato/leaf-blight/predict', reportPath: '/api/crops/tomato/leaf-blight/generate-report', input: 'image', trainingImageHints: ['clear affected area', 'sharp focus', 'natural daylight'] },
@@ -55,4 +59,26 @@ export function getModels(category: IntelligenceCategory) {
 
 export function getModelsForSubject(subject: string) {
   return INTELLIGENCE_MODELS.filter(model => model.subject === subject);
+}
+
+/**
+ * Runtime discovery from the in-repo Python diagnostic gateway. Only models
+ * reported ready by the server can be selected; entries in its example
+ * registry are not silently treated as trained/licensed/available.
+ */
+export function gatewayModel(input: {
+  id: string; name: string; category: IntelligenceCategory; subject: string;
+  ready: boolean; validated_for_botswana?: boolean; review_required?: boolean;
+}): IntelligenceModel {
+  return {
+    id: input.id, name: input.name, category: input.category,
+    subject: input.subject, service: 'gateway', provider: 'gateway',
+    configured: input.ready, validatedForBotswana: !!input.validated_for_botswana,
+    reviewRequired: input.review_required !== false,
+    predictPath: '/v1/predict', reportPath: '/v1/report',
+    input: 'image', trainingImageHints: [
+      'Use clear daylight and keep the affected area in focus',
+      'Capture additional symptoms for a professional to assess',
+    ],
+  };
 }

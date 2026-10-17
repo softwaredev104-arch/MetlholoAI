@@ -145,6 +145,7 @@ export default function Scan() {
   }, [user?.uid, farm?.id]);
 
   async function choose(source: 'camera' | 'library') {
+    if (loading) return;
     const result =
       source === 'camera'
         ? await ImagePicker.launchCameraAsync({
@@ -170,11 +171,17 @@ export default function Scan() {
       setPrediction(null);
       setReport(null);
       setReference(null);
+      setLastDiagnosisId('');
     }
   }
 
   async function runPrediction() {
-    if (!uri || !model) return;
+    if (!uri || !model || loading) return;
+    // A new inference must never reuse another model's finding, report or case link.
+    setPrediction(null);
+    setReport(null);
+    setReference(null);
+    setLastDiagnosisId('');
     setLoading(true);
 
     try {
@@ -249,7 +256,7 @@ export default function Scan() {
   }
 
   async function createReport() {
-    if (!prediction || !model) return;
+    if (!prediction || !model || loading) return;
     setLoading(true);
 
     try {
@@ -282,6 +289,7 @@ export default function Scan() {
   }
 
   function selectCategory(next: ScanCategory) {
+    if (loading) return;
     setCategory(next);
     setUri(null);
     setSelectedPhoto(null);
@@ -376,7 +384,15 @@ export default function Scan() {
                   key={item}
                   label={item}
                   selected={subject === item}
-                  onPress={() => setSubject(item)}
+                  onPress={() => {
+                    if (loading || item === subject) return;
+                    setSubject(item);
+                    setPrediction(null);
+                    setReport(null);
+                    setReference(null);
+                    setLastDiagnosisId('');
+                    setPhotoNotice('');
+                  }}
                 />
               ))}
             </View>
@@ -390,7 +406,15 @@ export default function Scan() {
                   key={item.id}
                   label={item.name}
                   selected={model?.id === item.id}
-                  onPress={() => setModelId(item.id)}
+                  onPress={() => {
+                    if (loading || model?.id === item.id) return;
+                    setModelId(item.id);
+                    setPrediction(null);
+                    setReport(null);
+                    setReference(null);
+                    setLastDiagnosisId('');
+                    setPhotoNotice('');
+                  }}
                 />
               ))}
             </View>

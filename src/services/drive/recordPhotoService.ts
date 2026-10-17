@@ -20,7 +20,7 @@ export type PendingPhoto = {
 type MediaContext = {
   ownerId: string;
   farmId: string;
-  recordType: 'animals' | 'crops' | 'cases' | 'diagnoses';
+  recordType: 'animals' | 'crops' | 'cases' | 'diagnoses' | 'healthRecords' | 'feedingPlans' | 'treatments';
 };
 
 const MEDIA_BASE = 'https://www.googleapis.com/drive/v3/files';

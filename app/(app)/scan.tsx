@@ -61,18 +61,21 @@ export default function Scan() {
     sourceRecordType?: 'animals' | 'crops';
     sourceRecordId?: string;
     sourceName?: string;
+    preferredModelId?: string;
+    introReviewed?: string;
   }>();
   const { user, farm } = usePrimaryFarm();
   const { colors } = useTheme();
+  const preferredModel = INTELLIGENCE_MODELS.find(item => item.id === params.preferredModelId);
 
-  const [introCompleted, setIntroCompleted] = useState(false);
+  const [introCompleted, setIntroCompleted] = useState(params.introReviewed === 'yes');
   const [guidedModelId, setGuidedModelId] = useState('');
   const [category, setCategory] = useState<ScanCategory>(
-    params.sourceRecordType === 'animals'
+    preferredModel?.category ?? (params.sourceRecordType === 'animals'
       ? 'livestock'
       : params.sourceRecordType === 'crops'
         ? 'crops'
-        : 'crops',
+        : 'crops'),
   );
   const [gatewayModels, setGatewayModels] = useState<IntelligenceModel[]>([]);
   const [gatewayError, setGatewayError] = useState('');
@@ -101,20 +104,21 @@ export default function Scan() {
     [availableModels],
   );
   const [subject, setSubject] = useState<string>(
-    params.sourceName && availableModels.some(model => model.subject === params.sourceName)
+    preferredModel?.subject ?? (params.sourceName && availableModels.some(model => model.subject === params.sourceName)
       ? params.sourceName
-      : subjects.at(0) ?? '',
+      : subjects.at(0) ?? ''),
   );
   const subjectModels = useMemo(
     () => availableModels.filter(model => !subject || model.subject === subject),
     [availableModels, subject],
   );
-  const [modelId, setModelId] = useState<string>(subjectModels.at(0)?.id ?? '');
+  const [modelId, setModelId] = useState<string>(preferredModel?.id ?? subjectModels.at(0)?.id ?? '');
   const model: IntelligenceModel | undefined =
     subjectModels.find(item => item.id === modelId) ?? subjectModels[0];
 
   const [uri, setUri] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<PendingPhoto | null>(null);
+  const [photoReviewed, setPhotoReviewed] = useState(false);
   const [photoNotice, setPhotoNotice] = useState('');
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [report, setReport] = useState<any>(null);
@@ -164,6 +168,7 @@ export default function Scan() {
       const asset = result.assets.at(0);
       if (!asset) return;
       setUri(asset.uri);
+      setPhotoReviewed(false);
       setSelectedPhoto({
         uri: asset.uri,
         name: asset.fileName || 'Diagnosis photo.jpg',
@@ -179,7 +184,7 @@ export default function Scan() {
   }
 
   async function runPrediction() {
-    if (!uri || !model || loading) return;
+    if (!uri || !model || loading || !photoReviewed || guidedModelId !== model.id) return;
     // A new inference must never reuse another model's finding, report or case link.
     setPrediction(null);
     setReport(null);
@@ -296,6 +301,7 @@ export default function Scan() {
     setCategory(next);
     setUri(null);
     setSelectedPhoto(null);
+    setPhotoReviewed(false);
     setPhotoNotice('');
     setPrediction(null);
     setReport(null);
@@ -402,6 +408,7 @@ export default function Scan() {
                     setGuidedModelId('');
                     setUri(null);
                     setSelectedPhoto(null);
+                    setPhotoReviewed(false);
                     setPrediction(null);
                     setReport(null);
                     setReference(null);
@@ -427,6 +434,7 @@ export default function Scan() {
                     setGuidedModelId('');
                     setUri(null);
                     setSelectedPhoto(null);
+                    setPhotoReviewed(false);
                     setPrediction(null);
                     setReport(null);
                     setReference(null);
@@ -490,11 +498,31 @@ export default function Scan() {
           ) : null}
 
           {uri && model && guidedModelId === model.id ? (
+            <AppCard>
+              <AppText variant="headline">Check this photo before diagnosing</AppText>
+              <AppText style={{ color: colors.textSecondary }}>
+                Can you clearly see the affected area, with good lighting and no blur?
+                This is your own photo-quality check; MetlholoAI has not assessed its quality automatically.
+              </AppText>
+              {photoReviewed ? (
+                <StatusPill label="Photo reviewed · ready to try" tone="success" />
+              ) : (
+                <AppButton
+                  title="Yes · The photo is clear"
+                  icon="checkmark-circle-outline"
+                  variant="secondary"
+                  onPress={() => setPhotoReviewed(true)}
+                />
+              )}
+            </AppCard>
+          ) : null}
+
+          {uri && model && guidedModelId === model.id ? (
             <AppButton
               title="Run Diagnosis"
               icon="scan-outline"
               loading={loading}
-              disabled={!modelReady(model)}
+              disabled={!modelReady(model) || !photoReviewed}
               onPress={runPrediction}
             />
           ) : null}

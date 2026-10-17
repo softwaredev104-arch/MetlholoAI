@@ -23,7 +23,7 @@ export default function ModelGuide() {
     <AppScreen maxWidth={900}>
       <ModelCaptureGuide
         model={model}
-        onContinue={() => router.push('/(app)/scan' as any)}
+        onContinue={() => router.push({ pathname: '/(app)/scan', params: { preferredModelId: model.id } })}
         onChangeModel={() => router.back()}
       />
     </AppScreen>

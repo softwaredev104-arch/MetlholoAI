@@ -50,7 +50,7 @@ export default function IntelligenceExplorer() {
         subject={subject ?? ''}
         models={subject ? getModelsForSubject(subject) : []}
         onClose={() => setSubject(null)}
-        onSelect={model => { setSelected(model); setSubject(null); router.push({ pathname: '/model-guide', params: { modelId: model.id } }); }}
+        onSelect={model => { setSelected(model); setSubject(null); router.push({ pathname: '/(app)/scan', params: { preferredModelId: model.id, introReviewed: 'yes' } }); }}
       />
 
       {selected ? (

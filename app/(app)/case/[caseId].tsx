@@ -5,6 +5,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
+import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
 import { SectionHeader, StatusPill } from '@/components/app/ProductUI';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
@@ -107,9 +108,19 @@ export default function CaseDetail() {
         </AppText>
         {record.photos && record.photos.length > 0 ? (
           <View style={styles.photos}>
-            {record.photos.map(uri => (
-              <Image key={uri} source={{ uri }} style={styles.photo} />
-            ))}
+            {record.photos.map((photo, i) =>
+              typeof photo === 'string' ? (
+                <Image key={i} source={{ uri: photo }} style={styles.photo} />
+              ) : (
+                <DrivePhotoThumbnail
+                  key={photo.id}
+                  context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'cases' }}
+                  photo={photo}
+                  width={120}
+                  height={120}
+                />
+              ),
+            )}
           </View>
         ) : null}
       </AppCard>

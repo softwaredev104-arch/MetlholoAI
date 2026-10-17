@@ -53,3 +53,27 @@ PlantVillage classes do NOT cover Fall Armyworm, grasshoppers, cattle, or poultr
 Do not map those names to a PlantVillage classifier, invent symptoms, or
 relable an unrelated disease as a detected class. A ready model is shown only
 when its real weights and server have been installed and verified.
+
+
+## Activate a trained model (on the Python inference host)
+
+After running `scripts.train_plantvillage` with an exact dataset revision and
+reviewing actual held-out accuracy, stage the ONNX weights, labels, and
+`*.manifest.json` files together under `models/`. Then run:
+
+```bash
+# Non-ready registry entry by default (no public claims):
+python -m scripts.register_plantvillage models/plantvillage-maize-v1.manifest.json
+
+# Only after checking commercial redistribution rights, source attribution,
+# training metadata, and any share-alike obligations:
+python -m scripts.register_plantvillage models/plantvillage-maize-v1.manifest.json --acknowledge-licensing
+METLHOLO_MODEL_REGISTRY_PATH=registry.approved.json uvicorn app:app --host 0.0.0.0 --port 8011
+```
+
+Registration checks class count, the model's exact SHA256 hash and held-out
+metrics. It never marks `validated_for_botswana` true, even after approval.
+Configure Firebase Admin credentials and CORS for any public HTTPS deployment;
+never enable `METLHOLO_DEV_NO_AUTH` publicly. Existing model records and
+legacy endpoints are preserved. Static Cloudflare Workers cannot execute
+this Python/ONNX FastAPI service; you must provide an HTTPS Python host.

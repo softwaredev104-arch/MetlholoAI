@@ -13,6 +13,7 @@ import re
 import tempfile
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -88,6 +89,45 @@ def _is_ready(m: dict[str, Any]) -> bool:
     return False
 
 
+def _capture_examples(m: dict[str, Any]) -> list[dict[str, str]]:
+    """Publish only approved pictures with attribution and explicit provenance.
+
+    A similar-looking public dataset picture is NOT proof that exact image was
+    in this model's training split. Operators must verify both facts.
+    """
+    raw = m.get("capture_examples", [])
+    if not isinstance(raw, list):
+        return []
+    result: list[dict[str, str]] = []
+    for item in raw[:12]:
+        if not isinstance(item, dict) or item.get("redistribution_allowed") is not True:
+            continue
+        if not all(isinstance(item.get(key), str) and item[key].strip()
+                   for key in ("image_url", "source_url", "title", "attribution", "license")):
+            continue
+        links = [urlparse(item[key]) for key in ("image_url", "source_url")]
+        if not all(link.scheme == "https" and link.hostname and
+                   not link.username and not link.password
+                   for link in links):
+            continue
+        kind = item.get("kind")
+        if kind == "verified_training":
+            if item.get("training_membership_verified") is not True:
+                continue
+        elif kind != "licensed_reference":
+            continue
+        result.append({
+            "image_url": item["image_url"], "source_url": item["source_url"],
+            "title": item["title"], "attribution": item["attribution"],
+            "license": item["license"], "kind": kind,
+            "training_membership_verified": kind == "verified_training",
+            "redistribution_allowed": True,
+        })
+        if len(result) >= 3:
+            break
+    return result
+
+
 def _selected_model(model_id: str) -> dict[str, Any]:
     item = next((m for m in _model_registry() if m.get("id") == model_id), None)
     if not item:
@@ -132,6 +172,7 @@ def models(uid: str = Depends(verify_firebase)):
                 "ready": _is_ready(m),
                 "validated_for_botswana": m.get("validated_for_botswana") is True,
                 "review_required": True,
+                "capture_examples": _capture_examples(m) if _is_ready(m) else [],
             } for m in _model_registry()
         ]
     }

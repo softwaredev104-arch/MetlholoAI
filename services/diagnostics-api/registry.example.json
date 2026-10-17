@@ -13,7 +13,8 @@
       "license_verified": false,
       "validated_for_botswana": false,
       "input_size": 224,
-      "normalization": "imagenet"
+      "normalization": "imagenet",
+      "capture_examples": []
     },
     {
       "id": "maize-fall-armyworm-rf",
@@ -24,7 +25,8 @@
       "model_id": "REPLACE_WITH_CONFIRMED_WORKSPACE_SLUG/VERSION",
       "license": "VERIFY_UNIVERSE_MODEL_LICENSE",
       "license_verified": false,
-      "validated_for_botswana": false
+      "validated_for_botswana": false,
+      "capture_examples": []
     },
     {
       "id": "cattle-lumpy-skin-rf",
@@ -35,7 +37,8 @@
       "model_id": "REPLACE_WITH_CONFIRMED_WORKSPACE_SLUG/VERSION",
       "license": "VERIFY_VETERINARY_MODEL_LICENSE",
       "license_verified": false,
-      "validated_for_botswana": false
+      "validated_for_botswana": false,
+      "capture_examples": []
     }
   ]
 }

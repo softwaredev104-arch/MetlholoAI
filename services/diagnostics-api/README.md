@@ -133,3 +133,34 @@ The original \`EXPO_PUBLIC_AI_*_BASE_URL\` endpoints remain unchanged, including
 their \`/predict\` and \`/generate-report\` paths. Expo chooses the gateway only
 for dynamically discovered, installed gateway models. No existing farm record
 or Drive schema is erased.
+
+## Farmer camera guide and photo provenance (October 2026)
+
+Every scanner entry starts with a general photo-quality guide; after selecting a
+model the farmer reviews model-specific acceptable/retake framing diagrams and
+five photography tips **before** camera or gallery access. The diagrams are
+illustrations, never mislabeled as model-training photographs.
+
+The optional `capture_examples` array in an approved private model registry
+supplies up to three real images to `GET /v1/models`, in this shape:
+
+```json
+{
+  "image_url": "https://licensed-image-host.example/approved.jpg",
+  "source_url": "https://source.example/photo-attribution",
+  "title": "Disease example shown in focus",
+  "attribution": "Photographer / data publisher",
+  "license": "VERIFIED-DISTRIBUTION-LICENSE",
+  "redistribution_allowed": true,
+  "kind": "licensed_reference",
+  "training_membership_verified": false
+}
+```
+
+To designate an image as `verified_training`, **both** `kind` and
+`training_membership_verified: true` must be set based on verifiable
+training-split membership for the exact trained model version. An image from a
+related dataset is not sufficient. All examples require actual redistribution
+permission, source URL, HTTPS image URL, license and attribution. Unverified,
+incomplete or non-HTTPS examples are silently omitted. The current checked-in
+registry does not include any approved example photographs.

@@ -116,3 +116,42 @@ def test_invalid_upload_rejected(client, monkeypatch):
         files={"image": ("x.jpg", b"not an image", "image/jpeg")},
     )
     assert response.status_code == 415
+
+
+def test_capture_example_provenance_is_enforced(client, monkeypatch):
+    photo = {
+        "image_url": "https://images.example.org/leaf.jpg",
+        "source_url": "https://research.example.org/training/leaf",
+        "title": "Clear leaf view", "attribution": "Research project",
+        "license": "CC BY 4.0", "redistribution_allowed": True,
+    }
+    monkeypatch.setattr(diagnostics, "_model_registry", lambda: [{
+        "id": "example-model", "display_name": "Example model",
+        "category": "crops", "subject": "Maize", "provider": "roboflow",
+        "model_id": "public/1", "license": "test", "license_verified": True,
+        "capture_examples": [
+            {**photo, "kind": "verified_training"},  # Must be rejected
+            {**photo, "kind": "verified_training",
+             "training_membership_verified": True},
+            {**photo, "kind": "licensed_reference", "redistribution_allowed": False},
+            {**photo, "kind": "licensed_reference", "image_url": "http://not-https/image.jpg"},
+        ],
+    }])
+    result = client.get("/v1/models")
+    assert result.status_code == 200
+    examples = result.json()["models"][0]["capture_examples"]
+    assert len(examples) == 1
+    assert examples[0]["kind"] == "verified_training"
+    assert examples[0]["training_membership_verified"] is True
+
+
+def test_uninstalled_models_never_publish_image_examples(client, monkeypatch):
+    monkeypatch.setattr(diagnostics, "_model_registry", lambda: [{
+        "id": "unavailable", "display_name": "Unavailable",
+        "category": "crops", "subject": "Maize", "provider": "onnx",
+        "license_verified": False, "license": "pending",
+        "capture_examples": [{"image_url": "https://example.org/leaf.jpg"}],
+    }])
+    data = client.get("/v1/models").json()["models"][0]
+    assert data["ready"] is False
+    assert data["capture_examples"] == []

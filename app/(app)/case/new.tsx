@@ -16,6 +16,7 @@ import {
   type CropFieldRecord,
 } from '@/services/farms/domainRepository';
 import { createCase } from '@/services/cases/caseRepository';
+import { listDiagnoses } from '@/services/intelligence/diagnosisRepository';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 
@@ -29,6 +30,7 @@ export default function NewCase() {
     animalName?: string;
     cropId?: string;
     cropName?: string;
+    diagnosisId?: string;
   }>();
   const { user, farm } = usePrimaryFarm();
   const { colors } = useTheme();
@@ -58,6 +60,7 @@ export default function NewCase() {
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [linkedDiagnosisId, setLinkedDiagnosisId] = useState('');
 
   useEffect(() => {
     if (!user || !farm) return;
@@ -69,6 +72,27 @@ export default function NewCase() {
       setCrops(nextCrops);
     });
   }, [user?.uid, farm?.id]);
+
+  useEffect(() => {
+    if (!user || !farm || !params.diagnosisId) return;
+    let active = true;
+    void listDiagnoses(user.uid, farm.id).then(records => {
+      const matched = records.find(item =>
+        item.id === params.diagnosisId &&
+        item.ownerId === user.uid && item.farmId === farm.id
+      );
+      // Never trust a deep-link claim about diagnosis or farm ownership.
+      if (!active || !matched) return;
+      setLinkedDiagnosisId(matched.id);
+      setDisease(matched.outcome === 'Uncertain' ? 'Uncertain AI finding' : matched.outcome);
+      setSubjectType(matched.sourceRecordType === 'animals' ? 'animal' : 'crop');
+      setSubjectId(matched.sourceRecordId === 'unlinked' ? '' : matched.sourceRecordId);
+      setSubjectName(matched.sourceName);
+      setNotes('AI-suggested observation (unverified). Model: ' + matched.modelName +
+        '. Professional review is required before confirmation or public alerts.');
+    }).catch(() => setError('Unable to load the saved diagnosis.'));
+    return () => { active = false; };
+  }, [user?.uid, farm?.id, params.diagnosisId]);
 
   function chooseSubject(
     type: SubjectType,
@@ -106,6 +130,8 @@ export default function NewCase() {
         cropName:
           subjectType === 'crop' ? subjectName || undefined : undefined,
         disease: disease.trim(),
+        sourceDiagnosisId: linkedDiagnosisId || undefined,
+        verificationStatus: 'farmer_reported',
         severity,
         district: district.trim() || undefined,
         village: village.trim() || undefined,
@@ -130,7 +156,7 @@ export default function NewCase() {
     <AppScreen maxWidth={820}>
       <AppText variant="largeTitle">Create Case Record</AppText>
       <AppText style={{ color: colors.textSecondary }}>
-        Log a new health case for livestock, crops, or the wider farm.
+        Log a private farm observation. AI findings are not official disease confirmations or regional outbreak alerts.
       </AppText>
 
       <View style={styles.section}>

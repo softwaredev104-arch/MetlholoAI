@@ -5,7 +5,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppButton } from '@/components/ui/AppButton';
-import { DrivePhotoThumbnail } from '@/components/farm/RecordPhotoField';
+import { DrivePhotoThumbnail, RecordPhotoField } from '@/components/farm/RecordPhotoField';
 import { SectionHeader, StatusPill } from '@/components/app/ProductUI';
 import { usePrimaryFarm } from '@/hooks/usePrimaryFarm';
 import {
@@ -183,6 +183,13 @@ export default function CaseDetail() {
                 tone={item.status === 'completed' ? 'success' : 'info'}
               />
             </View>
+            {item.photos?.length ? (
+              <RecordPhotoField
+                context={{ ownerId: user?.uid ?? '', farmId: farm?.id ?? '', recordType: 'treatments' }}
+                photos={item.photos}
+                label="Treatment evidence"
+              />
+            ) : null}
           </AppCard>
         ))
       )}

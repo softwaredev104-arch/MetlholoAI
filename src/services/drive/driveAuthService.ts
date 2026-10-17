@@ -20,6 +20,8 @@ type ConnectOptions = {
 const DRIVE_SCOPE =
   'openid email profile https://www.googleapis.com/auth/drive.file';
 const grantKey = (ownerId: string) => `metlholoai.driveGrant.${ownerId}`;
+// Only a consent hint, never proof of an active or valid OAuth token.
+const rememberedGrantOwners = new Set<string>();
 
 let accessToken = '';
 let expiresAt = 0;
@@ -63,13 +65,17 @@ async function rememberGrant(
     lastConnectedAt: now,
   };
   await AsyncStorage.setItem(grantKey(ownerId), JSON.stringify(grant));
+  rememberedGrantOwners.add(ownerId);
 }
 
 async function readGrant(ownerId: string) {
   const raw = await AsyncStorage.getItem(grantKey(ownerId));
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as DriveGrant;
+    const grant = JSON.parse(raw) as DriveGrant;
+    if (grant.ownerId !== ownerId) return null;
+    rememberedGrantOwners.add(ownerId);
+    return grant;
   } catch {
     return null;
   }
@@ -197,9 +203,16 @@ export const driveAuthService = {
     return Boolean(await readGrant(ownerId));
   },
 
-  async connect(options: ConnectOptions = {}) {
-    return requestToken({ ...options, prompt: options.prompt ?? 'consent' });
-  },
+  connect(options: ConnectOptions = {}) {
+    if (this.isConnected()) return Promise.resolve(accessToken);
+    // These values are already in memory when the user taps Connect. Do NOT
+    // await AsyncStorage here: Safari requires requestAccessToken to run in
+    // the original tap gesture. A remembered grant can skip forced consent;
+    // Google still decides whether account selection or consent is needed.
+    const prompt = options.prompt ??
+      (options.ownerId && rememberedGrantOwners.has(options.ownerId) ? '' : 'consent');
+    return requestToken({ ...options, prompt });
+  }
 
   async restore(options: Omit<ConnectOptions, 'prompt'> & { force?: boolean }) {
     if (Platform.OS !== 'web' || !isGoogleDriveConfigured) return false;
@@ -243,6 +256,7 @@ export const driveAuthService = {
     clearToken();
     if (ownerId) {
       await AsyncStorage.removeItem(grantKey(ownerId));
+      rememberedGrantOwners.delete(ownerId);
     }
   },
 };

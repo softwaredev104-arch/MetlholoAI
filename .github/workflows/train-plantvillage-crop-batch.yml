@@ -1,0 +1,116 @@
+name: Train PlantVillage Crop Research Batch
+
+# Never modifies the live diagnostics registry or publishes any model.
+# Run once on introduction of this workflow; future runs are manual.
+on:
+  push:
+    branches: [feat/diagnostics-model-gateway]
+    paths:
+      - '.github/workflows/train-plantvillage-crop-batch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train-crop-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        working-directory: services/diagnostics-api
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      HF_HUB_DISABLE_PROGRESS_BARS: '1'
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-train.txt
+      - name: Pin exact published split and image revision
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from huggingface_hub import HfApi
+          pinned = '9e97599868962bd0079b8db4b7f1efa9185fa1e7'
+          confirmed = HfApi().dataset_info('mohanty/PlantVillage', revision=pinned).sha
+          if confirmed != pinned:
+              raise SystemExit('Pinned training dataset changed or could not be verified')
+          Path('dataset-revision.txt').write_text(pinned + '\n', encoding='utf-8')
+          print('VERIFIED DATASET REVISION:', pinned)
+          PY
+      - name: Train, test and export separate crop candidate models
+        run: |
+          set -uo pipefail
+          mkdir -p models
+          failures=0
+          for crop in tomato potato pepper grape apple; do
+            model_id="plantvillage-${crop}-transfer-pilot-v1"
+            echo "::group::Research model $model_id"
+            if python -u -m scripts.train_plantvillage \
+              --revision "$(cat dataset-revision.txt)" \
+              --crop "$crop" \
+              --model-id "$model_id" \
+              --backbone imagenet1k_v1 \
+              --epochs 6 \
+              --batch-size 24 \
+              --workers 0 \
+              --max-train-per-class 150 \
+              --max-test-per-class 80 \
+              --min-test-accuracy 0.65; then
+              # Validate the actual exported ONNX binary using independent runtime.
+              if python - "$model_id" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          import numpy as np
+          import onnxruntime as ort
+          root = Path('models')
+          model_id = sys.argv[1]
+          weights = root / (model_id + '.onnx')
+          labels = json.loads((root / (model_id + '.labels.json')).read_text())
+          manifest = json.loads((root / (model_id + '.manifest.json')).read_text())
+          assert hashlib.sha256(weights.read_bytes()).hexdigest() == manifest['weights_sha256']
+          assert manifest['license_verified'] is False
+          assert manifest['validated_for_botswana'] is False
+          session = ort.InferenceSession(str(weights), providers=['CPUExecutionProvider'])
+          result = session.run(None, {session.get_inputs()[0].name:
+              np.zeros((1, 3, 224, 224), dtype=np.float32)})[0]
+          assert result.shape == (1, len(labels)), (result.shape, len(labels))
+          assert np.isfinite(result).all()
+          print(f'ONNX_SMOKE_PASSED model={model_id} labels={len(labels)}', flush=True)
+          PY
+              then
+                printf '%s\tPASS_REAL_EVALUATION_AND_ONNX_SMOKE\n' "$crop" >> models/batch-summary.tsv
+              else
+                printf '%s\tFAILED_ONNX_SMOKE\n' "$crop" >> models/batch-summary.tsv
+                failures=$((failures + 1))
+              fi
+            else
+              printf '%s\tNOT_APPROVED_OR_TRAINING_FAILED\n' "$crop" >> models/batch-summary.tsv
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          done
+          cat models/batch-summary.tsv
+          test "$failures" -eq 0
+      - name: Upload all research metrics, checkpoints, ONNX candidates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plantvillage-crop-research-batch-${{ github.run_id }}
+          path: |
+            services/diagnostics-api/dataset-revision.txt
+            services/diagnostics-api/models/*.evaluation.json
+            services/diagnostics-api/models/*.checkpoint.pt
+            services/diagnostics-api/models/*.onnx
+            services/diagnostics-api/models/*.labels.json
+            services/diagnostics-api/models/*.manifest.json
+            services/diagnostics-api/models/batch-summary.tsv
+          if-no-files-found: warn
+          retention-days: 30

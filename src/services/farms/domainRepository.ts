@@ -1,4 +1,5 @@
 import type { FarmRecord } from '@/services/farms/farmRepository';
+import type { StoredPhoto } from '@/services/drive/recordPhotoService';
 import {
   createFarmRecord,
   deleteFarmRecord,
@@ -7,6 +8,7 @@ import {
 } from '@/services/farms/farmRepository';
 
 export type AnimalRecord = FarmRecord & {
+  photos?: StoredPhoto[];
   species?: string;
   breed?: string;
   tag?: string;
@@ -20,6 +22,7 @@ export type AnimalRecord = FarmRecord & {
 };
 
 export type CropFieldRecord = FarmRecord & {
+  photos?: StoredPhoto[];
   cropType?: string;
   variety?: string;
   areaHectares?: number;

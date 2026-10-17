@@ -15,82 +15,20 @@ import { getFirebaseAuth } from '@/services/firebase/client';
 import { createInitialUserProfile } from '@/services/auth/userProfileService';
 import { driveAuthService } from '@/services/drive/driveAuthService';
 import { googleDriveClientId } from '@/config/env';
+import { isGoogleIdentityReady, prepareGoogleIdentity } from './googleIdentity';
+import { requirePersistentBrowserSignIn } from './persistence';
 import type { Role } from '@/types/user';
 
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        oauth2?: {
-          initTokenClient(config: {
-            client_id: string;
-            scope: string;
-            callback: (response: {
-              access_token?: string;
-              expires_in?: number;
-              error?: string;
-              error_description?: string;
-            }) => void;
-            error_callback?: (error: { type?: string }) => void;
-          }): {
-            requestAccessToken(options?: { prompt?: string }): void;
-          };
-        };
-      };
-    };
+const GOOGLE_SIGN_IN_SCOPE = 'openid email profile https://www.googleapis.com/auth/drive.file';
+
+function getGoogleAccessToken() {
+  // Do not await a script or another operation before the Google popup call:
+  // iOS Safari requires the request to originate from the actual tap.
+  if (!isGoogleIdentityReady()) {
+    return Promise.reject(new Error(
+      'Google sign-in is still loading. Wait a moment and try again.',
+    ));
   }
-}
-
-const GOOGLE_SIGN_IN_SCOPE =
-  'openid email profile https://www.googleapis.com/auth/drive.file';
-
-let googleIdentityLoader: Promise<void> | null = null;
-
-function loadGoogleIdentityServices() {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') {
-    return Promise.reject(
-      new Error('Google sign-in is currently available in the web preview.'),
-    );
-  }
-
-  if (window.google?.accounts?.oauth2) return Promise.resolve();
-  if (googleIdentityLoader) return googleIdentityLoader;
-
-  googleIdentityLoader = new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-metlholo-google-identity]',
-    );
-
-    if (existing) {
-      if (window.google?.accounts?.oauth2) {
-        resolve();
-        return;
-      }
-      existing.addEventListener('load', () => resolve(), { once: true });
-      existing.addEventListener(
-        'error',
-        () => reject(new Error('Google Identity Services failed to load.')),
-        { once: true },
-      );
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.dataset.metlholoGoogleIdentity = 'true';
-    script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error('Google Identity Services failed to load.'));
-    document.head.appendChild(script);
-  });
-
-  return googleIdentityLoader;
-}
-
-async function getGoogleAccessToken() {
-  await loadGoogleIdentityServices();
 
   return new Promise<{ accessToken: string; expiresIn: number }>(
     (resolve, reject) => {
@@ -127,9 +65,13 @@ async function getGoogleAccessToken() {
           });
         },
         error_callback: error => {
-          finishError(
-            `Google sign-in popup error: ${error.type ?? 'unknown_error'}.`,
-          );
+          if (error.type === 'popup_closed' || error.type === 'popup_failed_to_open') {
+            finishError(
+              'Google sign-in was closed or blocked. On iPhone, open MetlholoAI directly in Safari, not an in-app browser, and try again. Email sign-in is also available.',
+            );
+          } else {
+            finishError('Google sign-in could not open (' + (error.type ?? 'unknown') + ').');
+          }
         },
       });
 
@@ -139,11 +81,15 @@ async function getGoogleAccessToken() {
 }
 
 export const authService = {
+  prepareGoogleSignIn() {
+    return Platform.OS === 'web' ? prepareGoogleIdentity() : Promise.resolve();
+  },
   subscribe(listener: (user: User | null) => void) {
     return onAuthStateChanged(getFirebaseAuth(), listener);
   },
 
   async signIn(email: string, password: string) {
+    await requirePersistentBrowserSignIn();
     return (
       await signInWithEmailAndPassword(
         getFirebaseAuth(),
@@ -161,10 +107,7 @@ export const authService = {
     }
 
     const googleToken = await getGoogleAccessToken();
-    await driveAuthService.adoptAccessToken(
-      googleToken.accessToken,
-      googleToken.expiresIn,
-    );
+    await requirePersistentBrowserSignIn();
 
     const firebaseCredential = GoogleAuthProvider.credential(
       null,
@@ -176,14 +119,16 @@ export const authService = {
       firebaseCredential,
     );
 
-    await driveAuthService.adoptAccessToken(
-      googleToken.accessToken,
-      googleToken.expiresIn,
-      {
-        ownerId: credential.user.uid,
-        expectedEmail: credential.user.email,
-      },
-    );
+    // A Drive token failure is NOT a Firebase sign-out.
+    try {
+      await driveAuthService.adoptAccessToken(
+        googleToken.accessToken,
+        googleToken.expiresIn,
+        { ownerId: credential.user.uid, expectedEmail: credential.user.email },
+      );
+    } catch {
+      // The user can explicitly reconnect Drive from their signed-in account.
+    }
 
     return credential.user;
   },
@@ -194,6 +139,7 @@ export const authService = {
     displayName: string,
     role: Role,
   ) {
+    await requirePersistentBrowserSignIn();
     const credential = await createUserWithEmailAndPassword(
       getFirebaseAuth(),
       email.trim(),

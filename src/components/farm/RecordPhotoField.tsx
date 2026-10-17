@@ -15,7 +15,7 @@ import {
 type PhotoContext = {
   ownerId: string;
   farmId: string;
-  recordType: 'animals' | 'crops' | 'cases' | 'diagnoses';
+  recordType: 'animals' | 'crops' | 'cases' | 'diagnoses' | 'healthRecords' | 'feedingPlans' | 'treatments';
 };
 type Props = {
   context: PhotoContext;

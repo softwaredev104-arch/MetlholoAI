@@ -1,4 +1,5 @@
-import { Image, Linking, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppCard } from '@/components/ui/AppCard';
 import { AppText } from '@/components/ui/AppText';
@@ -8,6 +9,7 @@ import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 import type { IntelligenceModel, IntelligenceCategory } from '@/services/intelligence/catalog';
 import { captureTips, GENERAL_CAPTURE_TIPS } from '@/services/intelligence/captureGuidance';
+import { ReferencePhotoViewer } from '@/components/intelligence/ReferencePhotoViewer';
 
 type VisualKind = IntelligenceCategory;
 const iconByKind: Record<VisualKind, keyof typeof Ionicons.glyphMap> = {
@@ -121,6 +123,8 @@ export function ModelCaptureGuide({
   const { colors } = useTheme();
   const photos = model.captureExamples ?? [];
   const tips = captureTips(model);
+  const { width } = useWindowDimensions();
+  const [openPhoto, setOpenPhoto] = useState<number | null>(null);
   return (
     <>
       <SectionHeader
@@ -131,45 +135,56 @@ export function ModelCaptureGuide({
       {photos.length ? (
         <>
           <AppCard>
-            <AppText variant="headline">Real PlantVillage reference photographs</AppText>
+            <AppText variant="headline">Photo examples to guide your shot</AppText>
             <AppText style={{ color: colors.textSecondary }}>
-              These photos are labelled dataset references, not verified training images
-              for this specific deployed model. They show controlled-background
-              examples; symptoms in the field may look different.
+              Tap any image to inspect it full screen, zoom in and compare details.
+              These are visual references, not proof of what a specific model was trained on.
+              Controlled-background examples can differ from real farm conditions.
             </AppText>
           </AppCard>
           <View style={styles.gallery}>
-          {photos.map(photo => (
-            <AppCard key={photo.uri} style={styles.sample}>
-              <Image
-                source={{ uri: photo.uri }}
-                style={styles.sampleImage}
-                resizeMode="cover"
-                accessibilityLabel={photo.title}
-              />
-              <AppText variant="headline">{photo.title}</AppText>
-              <StatusPill
-                label={photo.kind === 'verified_training' ? 'Verified training photograph' : 'Licensed reference photograph'}
-                tone="info"
-              />
-              <AppText style={{ color: colors.textSecondary }}>
-                {photo.attribution} · {photo.license}
-              </AppText>
-              <AppButton
-                title="View image source"
-                variant="ghost"
-                onPress={() => { void Linking.openURL(photo.sourceUrl); }}
-              />
-            </AppCard>
-          ))}
+            {photos.map((photo, index) => (
+              <Pressable
+                key={photo.uri}
+                accessibilityRole="button"
+                accessibilityLabel={`Open reference photo ${index + 1} full screen`}
+                accessibilityHint="Opens an enlarged image viewer with image details"
+                onPress={() => setOpenPhoto(index)}
+                style={styles.samplePressable}
+              >
+                <AppCard style={styles.sample}>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={[styles.sampleImage, {
+                      height: Math.max(285, Math.min(460, width * 0.85)),
+                    }]}
+                    resizeMode="contain"
+                    accessibilityLabel={`Reference photo ${index + 1}`}
+                  />
+                  <View style={styles.photoRow}>
+                    <AppText variant="headline">{`Reference photo ${index + 1}`}</AppText>
+                    <Ionicons name="expand-outline" color={colors.primary} size={24} />
+                  </View>
+                  <AppText style={{ color: colors.textSecondary }}>
+                    Tap to enlarge and inspect the visible details.
+                  </AppText>
+                </AppCard>
+              </Pressable>
+            ))}
           </View>
+          <ReferencePhotoViewer
+            photos={photos}
+            initialIndex={openPhoto ?? 0}
+            visible={openPhoto !== null}
+            onClose={() => setOpenPhoto(null)}
+          />
         </>
       ) : (
         <AppCard>
-          <AppText variant="headline">Model training examples are not yet verified</AppText>
+          <AppText variant="headline">Visual training examples unavailable</AppText>
           <AppText style={{ color: colors.textSecondary }}>
-            We do not have confirmed, redistributable training photos for this model.
-            Use the illustrated framing examples below; they show recommended composition, not training samples.
+            This model does not yet have verified, reusable photographs.
+            Follow the camera framing examples and capture tips below.
           </AppText>
         </AppCard>
       )}
@@ -222,7 +237,9 @@ const styles = StyleSheet.create({
   },
   tip: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   tipText: { flex: 1 },
-  gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
-  sample: { flex: 1, minWidth: 220 },
-  sampleImage: { width: '100%', height: 196, borderRadius: 12 },
+  gallery: { gap: Spacing.md, width: '100%' },
+  samplePressable: { width: '100%' },
+  sample: { width: '100%', gap: Spacing.sm },
+  sampleImage: { width: '100%', borderRadius: 12, backgroundColor: '#151915' },
+  photoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

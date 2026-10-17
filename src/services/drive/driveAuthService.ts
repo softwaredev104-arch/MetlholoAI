@@ -2,28 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { googleDriveClientId, isGoogleDriveConfigured } from '@/config/env';
 import { getFirebaseAuth } from '@/services/firebase/client';
-
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        oauth2?: {
-          initTokenClient(config: {
-            client_id: string;
-            scope: string;
-            callback: (response: {
-              access_token?: string;
-              expires_in?: number;
-              error?: string;
-              error_description?: string;
-            }) => void;
-            error_callback?: (error: { type?: string }) => void;
-          }): { requestAccessToken(options?: { prompt?: string }): void };
-        };
-      };
-    };
-  }
-}
+import { isGoogleIdentityReady, prepareGoogleIdentity } from '@/services/auth/googleIdentity';
 
 type DriveGrant = {
   ownerId: string;
@@ -46,49 +25,6 @@ let accessToken = '';
 let expiresAt = 0;
 let connectedEmail = '';
 let connectedOwnerUid = '';
-let loader: Promise<void> | null = null;
-
-function loadGoogleIdentityServices() {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') {
-    return Promise.reject(
-      new Error('Google Drive connection is currently available in the web preview.'),
-    );
-  }
-  if (window.google?.accounts?.oauth2) return Promise.resolve();
-  if (loader) return loader;
-
-  loader = new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-metlholo-google-identity]',
-    );
-    if (existing) {
-      if (window.google?.accounts?.oauth2) {
-        resolve();
-        return;
-      }
-      existing.addEventListener('load', () => resolve(), { once: true });
-      existing.addEventListener(
-        'error',
-        () => reject(new Error('Google Identity Services failed to load.')),
-        { once: true },
-      );
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.dataset.metlholoGoogleIdentity = 'true';
-    script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error('Google Identity Services failed to load.'));
-    document.head.appendChild(script);
-  });
-
-  return loader;
-}
-
 async function getGoogleIdentity(token: string) {
   try {
     const response = await fetch(
@@ -175,12 +111,18 @@ async function acceptToken(
   return token;
 }
 
-async function requestToken(options: ConnectOptions = {}) {
+function requestToken(options: ConnectOptions = {}): Promise<string> {
   if (!isGoogleDriveConfigured) {
     throw new Error('Google Drive client ID is missing.');
   }
 
-  await loadGoogleIdentityServices();
+  // Never await loading the SDK before initiating a popup on iOS Safari.
+  // The script must be preloaded, and this call must originate from a tap.
+  if (!isGoogleIdentityReady()) {
+    return Promise.reject(new Error(
+      'Google authorization is still loading. Wait a moment and try again.',
+    ));
+  }
 
   return new Promise<string>((resolve, reject) => {
     let settled = false;
@@ -229,6 +171,9 @@ async function requestToken(options: ConnectOptions = {}) {
 }
 
 export const driveAuthService = {
+  prepare() {
+    return Platform.OS === 'web' ? prepareGoogleIdentity() : Promise.resolve();
+  },
   isConfigured() {
     return isGoogleDriveConfigured;
   },
@@ -271,23 +216,11 @@ export const driveAuthService = {
       }
     }
 
-    const remembered = options.ownerId
-      ? await readGrant(options.ownerId)
-      : null;
-
-    if (!remembered && !options.force) return false;
-
-    try {
-      await requestToken({
-        ownerId: options.ownerId,
-        expectedEmail: options.expectedEmail ?? remembered?.accountEmail,
-        prompt: '',
-      });
-      return true;
-    } catch {
-      clearToken();
-      return false;
-    }
+    // A Google access token is intentionally never persisted to browser storage.
+    // On a fresh page, a remembered grant is *not* an active token. Silent
+    // tokenClient prompts outside user gestures are blocked by Safari and must
+    // not hold up Firebase authentication or disrupt the returning workspace.
+    return false;
   },
 
   async adoptAccessToken(

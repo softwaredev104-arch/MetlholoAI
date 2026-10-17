@@ -150,11 +150,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       const googleUser = isGoogleUser(firebaseUser);
 
-      await driveAuthService.connect({
-        ownerId: firebaseUser.uid,
-        expectedEmail: googleUser ? firebaseUser.email : undefined,
-        prompt: 'select_account',
-      });
+      // A Google token already adopted during sign-in is sufficient.
+      // Do not open a second Safari popup for the same session.
+      if (!driveAuthService.isConnected()) {
+        await driveAuthService.connect({
+          ownerId: firebaseUser.uid,
+          expectedEmail: googleUser ? firebaseUser.email : undefined,
+          prompt: 'select_account',
+        });
+      }
 
       const recovered = await restoreWorkspaceFromDrive(firebaseUser.uid);
       const next = recovered.profile ?? (await getUserProfile(firebaseUser.uid));
@@ -193,6 +197,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
+    // Only load Google's SDK in the background; never launch OAuth here.
+    // All permission prompts require a later explicit user action.
+    void driveAuthService.prepare().catch(() => {});
     let active = true;
     let sequence = 0;
 

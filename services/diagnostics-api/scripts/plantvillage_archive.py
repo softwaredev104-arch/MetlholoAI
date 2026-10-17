@@ -15,7 +15,6 @@ from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import Any
 
-from huggingface_hub import hf_hub_download
 
 SOURCE_ID = "mohanty/PlantVillage"
 REVISION_RE = re.compile(r"^[a-f0-9]{40}$")
@@ -183,6 +182,7 @@ def prepare_splits_from_files(
 
 
 def load_pinned_plantvillage_splits(revision: str) -> tuple[ArchiveSplit, ArchiveSplit]:
+    from huggingface_hub import hf_hub_download
     if not REVISION_RE.fullmatch(revision):
         raise ValueError("Require a pinned dataset revision")
     def download(path: str) -> str:

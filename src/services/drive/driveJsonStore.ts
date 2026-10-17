@@ -122,6 +122,7 @@ async function uploadJson(
 }
 
 export const driveJsonStore = {
+  ensureRootFolder,
   isConnected() {
     return driveAuthService.isConnected();
   },

@@ -122,7 +122,7 @@ def train(args: argparse.Namespace) -> Path:
     # Optional dependencies used ONLY on the model-training workstation.
     import numpy as np
     import torch
-    from datasets import load_dataset
+    from datasets import load_dataset, get_dataset_config_names
     from PIL import Image
     from torch import nn
     from torch.utils.data import DataLoader, Dataset
@@ -135,9 +135,22 @@ def train(args: argparse.Namespace) -> Path:
 
     # These are provided by the dataset publisher. Do NOT independently
     # random-split at the image level: the same leaf could leak across sets.
-    training = load_dataset(DATASET_ID, "color", split="train", revision=args.revision)
-    testing = load_dataset(DATASET_ID, "color", split="test", revision=args.revision)
-    label_names = list(training.features["label"].names)
+    available_configs = get_dataset_config_names(DATASET_ID, revision=args.revision)
+    # New Hugging Face "datasets" may publish the official metadata under
+    # "default" rather than legacy custom-loader "color".
+    config = "color" if "color" in available_configs else "default"
+    if config not in available_configs:
+        raise ValueError("PlantVillage has no usable pinned training configuration")
+    print(f"dataset_config={config}", flush=True)
+    training = load_dataset(DATASET_ID, config, split="train", revision=args.revision)
+    testing = load_dataset(DATASET_ID, config, split="test", revision=args.revision)
+    for required in ("image", "label", "leaf_id"):
+        if required not in training.features or required not in testing.features:
+            raise ValueError("Pinned dataset is missing required field: " + required)
+    label_feature = training.features["label"]
+    if not hasattr(label_feature, "names"):
+        raise ValueError("Pinned dataset does not provide a verified ClassLabel")
+    label_names = list(label_feature.names)
     if list(testing.features["label"].names) != label_names:
         raise ValueError("Publisher train/test labels do not match")
     classes = select_labels(label_names, args.crop)

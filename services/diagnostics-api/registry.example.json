@@ -1,0 +1,41 @@
+{
+  "models": [
+    {
+      "id": "plantvillage-crop-classifier",
+      "display_name": "PlantVillage crop/leaf classifier",
+      "category": "crops",
+      "subject": "Mixed crops",
+      "provider": "onnx",
+      "weights_path": "models/plantvillage.onnx",
+      "weights_sha256": "REPLACE_WITH_SHA256",
+      "labels_path": "models/plantvillage.labels.json",
+      "license": "VERIFY_SOURCE_DATA_AND_WEIGHTS",
+      "license_verified": false,
+      "validated_for_botswana": false,
+      "input_size": 224,
+      "normalization": "imagenet"
+    },
+    {
+      "id": "maize-fall-armyworm-rf",
+      "display_name": "Maize Fall Armyworm detector",
+      "category": "pests",
+      "subject": "Maize",
+      "provider": "roboflow",
+      "model_id": "REPLACE_WITH_CONFIRMED_WORKSPACE_SLUG/VERSION",
+      "license": "VERIFY_UNIVERSE_MODEL_LICENSE",
+      "license_verified": false,
+      "validated_for_botswana": false
+    },
+    {
+      "id": "cattle-lumpy-skin-rf",
+      "display_name": "Cattle skin lesion research model",
+      "category": "livestock",
+      "subject": "Cattle",
+      "provider": "roboflow",
+      "model_id": "REPLACE_WITH_CONFIRMED_WORKSPACE_SLUG/VERSION",
+      "license": "VERIFY_VETERINARY_MODEL_LICENSE",
+      "license_verified": false,
+      "validated_for_botswana": false
+    }
+  ]
+}

@@ -37,6 +37,7 @@ export type CropFieldRecord = FarmRecord & {
 };
 
 export type HealthRecord = FarmRecord & {
+  photos?: StoredPhoto[];
   recordType?: string;
   relatedName?: string;
   relatedId?: string;
@@ -55,6 +56,7 @@ export type FarmTask = FarmRecord & {
 };
 
 export type FeedingPlan = FarmRecord & {
+  photos?: StoredPhoto[];
   animalName?: string;
   species?: string;
   feedType?: string;

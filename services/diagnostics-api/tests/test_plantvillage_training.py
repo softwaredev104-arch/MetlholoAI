@@ -1,6 +1,6 @@
 import json
 import pytest
-from scripts.train_plantvillage import select_labels, proposed_manifest, sample_by_class
+from scripts.train_plantvillage import select_labels, proposed_manifest, sample_by_class, classification_metrics
 
 SHA = "a" * 40
 WEIGHTS = "b" * 64
@@ -87,3 +87,23 @@ def test_pretrained_backbone_manifest_remains_unapproved():
     assert manifest["transfer_learning_requires_independent_rights_review"] is True
     assert manifest["license_verified"] is False
     assert manifest["validated_for_botswana"] is False
+
+
+def test_detailed_holdout_metrics_are_computed_from_actual_predictions():
+    result = classification_metrics(
+        ["healthy", "blight", "rust"],
+        actual=[0, 0, 1, 1, 2, 2],
+        predicted=[0, 0, 1, 0, 2, 1],
+    )
+    assert result["per_class"]["healthy"]["recall"] == 1.0
+    assert result["per_class"]["blight"]["recall"] == 0.5
+    assert result["per_class"]["rust"]["recall"] == 0.5
+    assert result["confusion_matrix"] == [[2, 0, 0], [1, 1, 0], [0, 1, 1]]
+    assert result["macro_f1"] < 1.0
+
+
+def test_detailed_holdout_metrics_reject_invalid_classes():
+    with pytest.raises(ValueError):
+        classification_metrics(["healthy", "blight"], [0, 2], [0, 1])
+    with pytest.raises(ValueError):
+        classification_metrics(["healthy", "blight"], [0], [])

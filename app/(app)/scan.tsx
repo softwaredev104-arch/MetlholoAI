@@ -154,6 +154,7 @@ export default function Scan() {
 
   async function choose(source: 'camera' | 'library') {
     if (loading) return;
+    try {
     const result =
       source === 'camera'
         ? await ImagePicker.launchCameraAsync({
@@ -181,6 +182,18 @@ export default function Scan() {
       setReport(null);
       setReference(null);
       setLastDiagnosisId('');
+      if (!model || !modelReady(model)) {
+        setPhotoNotice(
+          'Camera preview captured. Diagnosis is not installed for this model yet; no prediction or Drive save was attempted.',
+        );
+      }
+    }
+    } catch (error) {
+      setPhotoNotice(
+        error instanceof Error
+          ? 'Unable to open the camera or gallery: ' + error.message
+          : 'Camera or gallery unavailable. Check Safari permissions and try again.',
+      );
     }
   }
 
@@ -472,9 +485,10 @@ export default function Scan() {
                   <StatusPill label="Inference service not installed" tone="warning" />
                   <AppText style={{ color: colors.textSecondary }}>
                     This is a catalogue entry, not a working AI model yet.
-                    PlantVillage reference photos and camera tips are available,
-                    but real prediction needs installed licensed weights and
-                    a reachable inference service. Your existing farm data is safe.
+                    Reference photos and camera tips are available. You may test
+                    camera capture and preview the image, but AI diagnosis requires
+                    installed licensed weights and a working inference service.
+                    Your existing farm data is safe.
                   </AppText>
                 </>
               ) : null}
@@ -503,22 +517,21 @@ export default function Scan() {
             <AppButton
               title="Open Camera"
               icon="camera-outline"
-              disabled={!modelReady(model)}
               onPress={() => choose('camera')}
             />
             <AppButton
               title="Choose Photo"
               icon="images-outline"
               variant="secondary"
-              disabled={!modelReady(model)}
               onPress={() => choose('library')}
             />
           </View> : null}
 
           {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
-          {uri && !recordPhotoService.isAvailable() ? (
+          {uri && model && modelReady(model) && !recordPhotoService.isAvailable() ? (
             <AppText style={{ color: colors.warning }}>
-              Google Drive is disconnected. Diagnosis results can still be saved, but the image will not be available on another device.
+              Google Drive is disconnected. Diagnosis results may be saved locally,
+              but the image will not be available on another device.
             </AppText>
           ) : null}
 
@@ -530,7 +543,10 @@ export default function Scan() {
                 This is your own photo-quality check; MetlholoAI has not assessed its quality automatically.
               </AppText>
               {photoReviewed ? (
-                <StatusPill label="Photo reviewed · ready to try" tone="success" />
+                <StatusPill
+                  label={modelReady(model) ? 'Photo reviewed · ready to try' : 'Photo reviewed · preview only'}
+                  tone="success"
+                />
               ) : (
                 <AppButton
                   title="Yes · The photo is clear"
@@ -540,6 +556,13 @@ export default function Scan() {
                 />
               )}
             </AppCard>
+          ) : null}
+
+          {uri && model && guidedModelId === model.id && !modelReady(model) ? (
+            <AppText style={{ color: colors.textSecondary }}>
+              Camera preview is available now. Diagnosis stays disabled until
+              a real, licensed model is installed on the inference gateway.
+            </AppText>
           ) : null}
 
           {uri && model && guidedModelId === model.id ? (

@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { useTheme } from '@/design/themes';
 import { Spacing } from '@/design/spacing';
 import { driveAuthService } from '@/services/drive/driveAuthService';
+import { restoreWorkspaceFromDrive } from '@/services/drive/workspaceRecoveryService';
 import {
   recordPhotoService,
   type PendingPhoto,
@@ -97,6 +98,9 @@ export function RecordPhotoField({
         expectedEmail: email,
         prompt: 'select_account',
       });
+      // Reconcile existing Drive and local records before a new photo-backed
+      // record save can rewrite farm-data.json.
+      await restoreWorkspaceFromDrive(context.ownerId);
       setConnected(recordPhotoService.isAvailable());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not connect Google Drive.');
@@ -148,9 +152,9 @@ export function RecordPhotoField({
         Up to {max} photos. Images are stored privately in your Google Drive;
         your farm record stores their Drive file IDs.
       </AppText>
-      {!readOnly && !connected ? (
+      {!readOnly ? (
         <AppButton
-          title="Connect Google Drive for photos"
+          title={connected ? 'Refresh Google Drive connection' : 'Connect Google Drive for photos'}
           icon="cloud-outline"
           variant="secondary"
           loading={connecting}

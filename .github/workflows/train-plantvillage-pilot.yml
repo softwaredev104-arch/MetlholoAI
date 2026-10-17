@@ -1,0 +1,93 @@
+name: Train PlantVillage Maize Research Candidate
+
+# An auditable one-time first run is triggered when this file is introduced.
+# Later training runs are manual. Models are artifacts only; never activated.
+on:
+  push:
+    branches: [feat/diagnostics-model-gateway]
+    paths:
+      - '.github/workflows/train-plantvillage-pilot.yml'
+  workflow_dispatch:
+    inputs:
+      crop:
+        description: 'Supported PlantVillage crop'
+        type: choice
+        options: [maize, tomato, potato, pepper, grape, apple]
+        default: maize
+        required: true
+      epochs:
+        description: 'Epoch count for the reproducible pilot'
+        type: choice
+        options: ['3', '6', '12']
+        default: '3'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        working-directory: services/diagnostics-api
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      HF_HUB_DISABLE_PROGRESS_BARS: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      OMP_NUM_THREADS: '2'
+      CROP: ${{ inputs.crop || 'maize' }}
+      EPOCHS: ${{ inputs.epochs || '3' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Disk budget
+        run: df -h .
+      - name: Install CPU training dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-train.txt
+      - name: Resolve and record exact dataset revision
+        run: |
+          python - <<'PY'
+          from huggingface_hub import HfApi
+          from pathlib import Path
+          import re
+          revision = HfApi().dataset_info('mohanty/PlantVillage').sha
+          if not re.fullmatch(r'[a-f0-9]{40}', revision):
+              raise SystemExit('Dataset revision cannot be pinned')
+          Path('dataset-revision.txt').write_text(revision+'\n')
+          print('Exact PlantVillage dataset revision:', revision, flush=True)
+          PY
+      - name: Train and evaluate real leaf images (disabled until reviewed)
+        run: |
+          set -euo pipefail
+          REVISION="$(cat dataset-revision.txt)"
+          python -u -m scripts.train_plantvillage \
+            --revision "$REVISION" \
+            --crop "$CROP" \
+            --model-id "plantvillage-${CROP}-pilot-v1" \
+            --epochs "$EPOCHS" \
+            --batch-size 24 \
+            --workers 0 \
+            --max-train-per-class 150 \
+            --max-test-per-class 80 \
+            --min-test-accuracy 0.65
+      - name: Upload checkpoint, held-out metrics and accepted candidate weights
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plantvillage-${{ env.CROP }}-research-candidate-${{ github.run_id }}
+          path: |
+            services/diagnostics-api/dataset-revision.txt
+            services/diagnostics-api/models/*.evaluation.json
+            services/diagnostics-api/models/*.checkpoint.pt
+            services/diagnostics-api/models/*.onnx
+            services/diagnostics-api/models/*.labels.json
+            services/diagnostics-api/models/*.manifest.json
+          retention-days: 30
+          if-no-files-found: warn
